@@ -74,7 +74,7 @@ endif
 
 INCS        = -I$(SRCDIR) -I$(CFGDIR) -I$(OSROOT) -I$(OSINCDIR) -I$(OSINCDIR)$(S)private -I$(BLDDIR)
 
-CFLAGS     ?= -O2 -Os -g -Wall
+CFLAGS     ?= -O2 -Os -g -Wall -Werror
 CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS)
 LDFLAGS    ?= -Wl,--gc-sections
 

@@ -35,14 +35,14 @@
 extern void exit(int);
 
 #define TEST_ITER  500
-#define PERF_TEST_PRIORITY		5  // Priorities will vary between 2 and 7
+#define PERF_TEST_PRIORITY      5  // Priorities will vary between 2 and 7
 
 //-----------------------------------------------------------------------------
 // Thread function for yield test. Store current cycle count and yield the
 // CPU right away.
 //-----------------------------------------------------------------------------
 
-static printStats = 1;
+static uint32_t printStats = 1;
 
 static uint32_t clock_vals[TEST_ITER * 3] = {0};
 static char clock_interrupted[TEST_ITER * 3] = {0};
@@ -52,58 +52,58 @@ static volatile uint32_t test_start = 0;
 static uint32_t test_total;
 static uint32_t test_max;
 
-static SemaphoreHandle_t xSemaphore;
-static SemaphoreHandle_t xMutex;
+static SemaphoreHandle_t  xSemaphore;
+static SemaphoreHandle_t  xMutex;
 static EventGroupHandle_t xGroupEvents;
-static QueueHandle_t	xQueue;
+static QueueHandle_t      xQueue;
 
 // Compute statistics
 typedef struct {
-	int cnt;
-	int sum;
-	int max;
+    int cnt;
+    int sum;
+    int max;
 } stats_t;
 
 static void stats_reset(stats_t *s)
 {
-	s->cnt = s->sum = 0;
-	s->max = -0x7FFFFFFF; // Small number
+    s->cnt = s->sum = 0;
+    s->max = -0x7FFFFFFF; // Small number
 }
 
 static void stats_update(stats_t *s, int value)
 {
-	s->cnt++;
-	s->sum += value;
-	if (s->max < value)
-		s->max = value;
+    s->cnt++;
+    s->sum += value;
+    if (s->max < value)
+        s->max = value;
 }
 
 // This function is called from timer ISR and takes appropriate action
 void vPerfTestTickHook(void)
 {
-	// yield_test: mark this clock as perturbed by ISR and ignore the next few clock information (task yields)
-	clock_interrupted[indx] = 1;
+    // yield_test: mark this clock as perturbed by ISR and ignore the next few clock information (task yields)
+    clock_interrupted[indx] = 1;
 }
 
 static void yield_func(void * arg)
 {
     int32_t i;
-	volatile uint32_t* pResponse = (volatile uint32_t*)arg;
-	*pResponse = 0;
-	register char thd_idx = pResponse - uiTaskResponse;
+    volatile uint32_t* pResponse = (volatile uint32_t*)arg;
+    *pResponse = 0;
+
     for (i = 0; i < TEST_ITER; i++)
-	{
-    	// In FreeRTOS, context switch can occur after interrupts, which can preempt this task for another one of equal priority
-    	// Hence we disable interrupts for proper behavior. The extras are time calibrated and corrected.
-    	int state = portENTER_CRITICAL_NESTED();
-    	clock_vals[indx++] = xthal_get_ccount();
-    	portEXIT_CRITICAL_NESTED(state);
-    	taskYIELD();
+    {
+        // In FreeRTOS, context switch can occur after interrupts, which can preempt this task for another one of equal priority
+        // Hence we disable interrupts for proper behavior. The extras are time calibrated and corrected.
+        int state = portENTER_CRITICAL_NESTED();
+        clock_vals[indx++] = xthal_get_ccount();
+        portEXIT_CRITICAL_NESTED(state);
+        taskYIELD();
     }
 
-	*pResponse = 1;
+    *pResponse = 1;
     
-	vTaskDelete(NULL);
+    vTaskDelete(NULL);
 }
 
 //-----------------------------------------------------------------------------
@@ -113,8 +113,9 @@ void sem_get(void * arg)
 {
     uint32_t end;
     uint32_t i;
-	volatile uint32_t* pResponse = (volatile uint32_t*)arg;
-	*pResponse = 0;
+    volatile uint32_t* pResponse = (volatile uint32_t*)arg;
+
+    *pResponse = 0;
     for(i = 0; i < TEST_ITER; i++) {
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
         end = xthal_get_ccount();
@@ -125,8 +126,8 @@ void sem_get(void * arg)
             test_max = test_max >= delta ? test_max : delta;
         }
     }
-	*pResponse = 1;
-	vTaskDelete(NULL);
+    *pResponse = 1;
+    vTaskDelete(NULL);
 }
 
 //-----------------------------------------------------------------------------
@@ -139,9 +140,9 @@ void sem_test(void * arg)
     uint32_t total = 0;
     uint32_t max   = 0;
     uint32_t i;
-    int32_t  ret;
-	volatile uint32_t* pResponse = (volatile uint32_t*)arg;
-	*pResponse = 0;
+    volatile uint32_t* pResponse = (volatile uint32_t*)arg;
+
+    *pResponse = 0;
 
     printf("\nSemaphore timing test"
            "\n---------------------\n");
@@ -162,7 +163,7 @@ void sem_test(void * arg)
     }
 
     if (printStats)
-    	printf("Semaphore put with no wake           : avg %u max %u cycles\n", total/TEST_ITER, max);
+        printf("Semaphore put with no wake           : avg %u max %u cycles\n", total/TEST_ITER, max);
 
     // Measure time to get a semaphore with no contention and no waits/
     // wakeups.
@@ -183,8 +184,8 @@ void sem_test(void * arg)
     // Now measure the time taken to put a semaphore when a lower priority
     // thread has to be unblocked.
 
-	uiTaskResponse[0] = 0;
-	xTaskCreate(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY - 1, NULL);
+    uiTaskResponse[0] = 0;
+    xTaskCreate(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY - 1, NULL);
 
     total = 0;
     max = 0;
@@ -201,9 +202,9 @@ void sem_test(void * arg)
     }
 
     while (!uiTaskResponse[0])
-	{
-		vTaskDelay(10);
-	}
+    {
+        vTaskDelay(10);
+    }
 
     if (printStats)
         printf("Semaphore put with thread wake       : avg %u max %u cycles\n", total/TEST_ITER, max);
@@ -212,7 +213,7 @@ void sem_test(void * arg)
     // a higher priority thread is unblocked.
 
 
-	xTaskCreate(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY + 1, NULL);
+    xTaskCreate(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY + 1, NULL);
 
     test_total = 0;
     test_max = 0;
@@ -223,18 +224,18 @@ void sem_test(void * arg)
         xSemaphoreGive(xSemaphore);
     }
 
-	while (!uiTaskResponse[0])
-	{
-		vTaskDelay(10);
-	}
+    while (!uiTaskResponse[0])
+    {
+        vTaskDelay(10);
+    }
 
     if (printStats)
         printf("Semaphore put with context switch    : avg %u max %u cycles\n", test_total/TEST_ITER, test_max);
-	*pResponse = 1;
+    *pResponse = 1;
 
     portbenchmarkPrint();
 
-	vSemaphoreDelete(xSemaphore);
+    vSemaphoreDelete(xSemaphore);
     vTaskDelete(NULL);
 }
 
@@ -249,8 +250,8 @@ void mutex_get(void * arg)
 
     for(i = 0; i < TEST_ITER; i ++)
     {
-    	xSemaphoreTake(xMutex, portMAX_DELAY);
-    	xSemaphoreGive(xMutex);
+        xSemaphoreTake(xMutex, portMAX_DELAY);
+        xSemaphoreGive(xMutex);
     }
 
     *pResponse = 1;
@@ -270,9 +271,9 @@ void mutex_get2(void * arg)
     for(i = 0; i < TEST_ITER; i ++)
     {
         // First get the semaphore to sync with lower priority thread
-    	xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
         // Now block on the mutex
-    	xSemaphoreTake(xMutex, portMAX_DELAY);
+        xSemaphoreTake(xMutex, portMAX_DELAY);
         delta = xthal_get_ccount() - test_start;
         test_total += delta;
         test_max = test_max >= delta ? test_max : delta;
@@ -293,7 +294,6 @@ void mutex_test(void * arg)
     uint32_t total;
     uint32_t max;
     uint32_t i;
-    int32_t  ret;
     volatile uint32_t* pResponse = (volatile uint32_t*)arg;
     *pResponse = 0;
     printf("\nMutex timing test"
@@ -329,9 +329,9 @@ void mutex_test(void * arg)
 
     if (printStats){
         printf("Mutex lock with no wake/contention   : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
         printf("Mutex unlock with no wake/contention : avg %u max %u cycles\n",
-        		total/TEST_ITER, max);
+                total/TEST_ITER, max);
     }
 
     // Now measure the time taken to unlock a mutex when a lower priority
@@ -344,9 +344,9 @@ void mutex_test(void * arg)
 
     for(i = 0; i < TEST_ITER; i++)
     {
-    	xSemaphoreTake(xMutex, portMAX_DELAY);
+        xSemaphoreTake(xMutex, portMAX_DELAY);
         // Let the other thread run so that it can block on the mutex
-    	vTaskDelay(1);
+        vTaskDelay(1);
         start = xthal_get_ccount();
         xSemaphoreGive(xMutex);
         delta = xthal_get_ccount() - start;
@@ -355,13 +355,13 @@ void mutex_test(void * arg)
     }
 
     while (!uiTaskResponse[1])
-	{
-		vTaskDelay(10);
-	}
+    {
+        vTaskDelay(10);
+    }
 
     if (printStats)
         printf("Mutex unlock with thread wake        : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
     // Now measure the time taken to unlock a mutex + context switch when
     // a higher priority thread is unblocked.
 
@@ -372,23 +372,23 @@ void mutex_test(void * arg)
 
     for(i = 0; i < TEST_ITER; i++)
     {
-    	xSemaphoreTake(xMutex, portMAX_DELAY);
+        xSemaphoreTake(xMutex, portMAX_DELAY);
         // Now signal the other thread with the semaphore. This will cause an
         // immdeiate switch to the other thread, which will then block on the
         // mutex and give back control to here.
-    	xSemaphoreGive(xSemaphore);
+        xSemaphoreGive(xSemaphore);
         test_start = xthal_get_ccount();
         xSemaphoreGive(xMutex);
     }
 
     while (!uiTaskResponse[1])
-	{
-		vTaskDelay(10);
-	}
+    {
+        vTaskDelay(10);
+    }
 
     if (printStats)
         printf("Mutex unlock with context switch     : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
 
     portbenchmarkPrint();
 
@@ -411,8 +411,8 @@ void event_get(void * arg)
     *pResponse = 0;
     for(i = 0; i < TEST_ITER; i ++)
     {
-    	xEventGroupWaitBits(xGroupEvents, 0xFFFF, pdFALSE, pdTRUE, portMAX_DELAY);
-    	xEventGroupClearBits(xGroupEvents, 0xFFFF);
+        xEventGroupWaitBits(xGroupEvents, 0xFFFF, pdFALSE, pdTRUE, portMAX_DELAY);
+        xEventGroupClearBits(xGroupEvents, 0xFFFF);
     }
 
     *pResponse = 1;
@@ -434,7 +434,7 @@ void event_get2(void * arg)
     for(i = 0; i < TEST_ITER; i ++)
     {
         // First get the semaphore to sync with lower priority thread
-    	xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
         // Now block on the event
         xEventGroupWaitBits(xGroupEvents, 0xFFFF, pdFALSE, pdTRUE, portMAX_DELAY);
         delta = xthal_get_ccount() - test_start;
@@ -457,7 +457,6 @@ void event_test(void * arg)
     uint32_t total;
     uint32_t max;
     uint32_t i;
-    int32_t  ret;
 
     volatile uint32_t* pResponse = (volatile uint32_t*)arg;
 
@@ -496,9 +495,9 @@ void event_test(void * arg)
 
     if (printStats) {
         printf("Event set with no wake/contention    : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
         printf("Event clear with no wake/contention  : avg %u max %u cycles\n",
-        		total/TEST_ITER, max);
+                total/TEST_ITER, max);
     }
 
     // Now measure the time taken to set an event when a lower priority
@@ -512,9 +511,9 @@ void event_test(void * arg)
 
     for(i = 0; i < TEST_ITER; i++)
     {
-    	xEventGroupClearBits(xGroupEvents, 0xFFFF);
+        xEventGroupClearBits(xGroupEvents, 0xFFFF);
         // Let the other thread run so that it can block on the event
-    	vTaskDelay(1);
+        vTaskDelay(1);
         start = xthal_get_ccount();
         xEventGroupSetBits(xGroupEvents, 0xFFFF);
         delta = xthal_get_ccount() - start;
@@ -523,13 +522,13 @@ void event_test(void * arg)
     }
 
     while (!uiTaskResponse[1])
-	{
-		vTaskDelay(100);
-	}
+    {
+        vTaskDelay(100);
+    }
 
     if (printStats)
         printf("Event set with thread wake           : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
 
     // Now measure the time taken to set an event + context switch when
     // a higher priority thread is unblocked.
@@ -542,23 +541,23 @@ void event_test(void * arg)
 
     for(i = 0; i < TEST_ITER; i++)
     {
-    	xEventGroupClearBits(xGroupEvents, 0xFFFF);
+        xEventGroupClearBits(xGroupEvents, 0xFFFF);
         // Now signal the other thread with the semaphore. This will cause an
         // immediate switch to the other thread, which will then block on the
         // event and give back control to here.
-    	xSemaphoreGive(xSemaphore);
+        xSemaphoreGive(xSemaphore);
         test_start = xthal_get_ccount();
         xEventGroupSetBits(xGroupEvents, 0xFFFF);
     }
 
     while (!uiTaskResponse[1])
-	{
-		vTaskDelay(100);
-	}
+    {
+        vTaskDelay(100);
+    }
 
     if (printStats)
         printf("Event set with context switch        : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
 
     portbenchmarkPrint();
 
@@ -582,7 +581,7 @@ void msg_get(void * arg)
     *pResponse = 0;
     for(i = 0; i < TEST_ITER; i++)
     {
-    	xQueueReceive(xQueue, msg, portMAX_DELAY);
+        xQueueReceive(xQueue, msg, portMAX_DELAY);
     }
 
     *pResponse = 1;
@@ -604,9 +603,9 @@ void msg_get2(void * arg)
     for(i = 0; i < TEST_ITER; i++)
     {
         // First get the semaphore to sync with lower priority thread
-    	xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
         // Now block on the queue
-    	xQueueReceive(xQueue, msg, portMAX_DELAY);
+        xQueueReceive(xQueue, msg, portMAX_DELAY);
         delta = xthal_get_ccount() - test_start;
         test_total += delta;
         test_max = test_max >= delta ? test_max : delta;
@@ -624,7 +623,6 @@ void msg_get2(void * arg)
 void msgq_test(void* arg)
 {
     int32_t  i;
-    int32_t  ret;
     uint32_t msg[4];
     uint32_t sum = 0;
     uint32_t max = 0;
@@ -676,9 +674,9 @@ void msgq_test(void* arg)
 
     if (printStats) {
         printf("Message put with no wake/contention  : avg %u max %u cycles\n",
-        		put_avg, put_max);
+                put_avg, put_max);
         printf("Message get with no wake/contention  : avg %u max %u cycles\n",
-        		get_avg, get_max);
+                get_avg, get_max);
     }
 
     // Now measure the time taken to send a message when a lower priority
@@ -693,7 +691,7 @@ void msgq_test(void* arg)
     for(i = 0; i < TEST_ITER; i++)
     {
         // Let the other thread run so that it can block on the event
-    	vTaskDelay(1);
+        vTaskDelay(1);
         start = xthal_get_ccount();
         xQueueSend(xQueue, msg, portMAX_DELAY);
         delta = xthal_get_ccount() - start;
@@ -702,13 +700,13 @@ void msgq_test(void* arg)
     }
 
     while (!uiTaskResponse[1])
-	{
-		vTaskDelay(100);
-	}
+    {
+        vTaskDelay(100);
+    }
 
     if (printStats)
         printf("Message put with thread wake         : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
 
     // Now measure the time taken to set an event + context switch when
     // a higher priority thread is unblocked.
@@ -724,19 +722,19 @@ void msgq_test(void* arg)
         // Now signal the other thread with the semaphore. This will cause an
         // immediate switch to the other thread, which will then block on the
         // msg queue and give back control to here.
-    	xSemaphoreGive(xSemaphore);
+        xSemaphoreGive(xSemaphore);
         test_start = xthal_get_ccount();
         xQueueSend(xQueue, msg, portMAX_DELAY);
     }
 
     while (!uiTaskResponse[1])
-	{
-		vTaskDelay(100);
-	}
+    {
+        vTaskDelay(100);
+    }
 
     if (printStats)
         printf("Message put with context switch      : avg %u max %u cycles\n",
-        		test_total/TEST_ITER, test_max);
+                test_total/TEST_ITER, test_max);
 
     portbenchmarkPrint();
 
@@ -752,7 +750,6 @@ void msgq_test(void* arg)
 //-----------------------------------------------------------------------------
 void yieldTest(void)
 {
-    int32_t  ret;
     uint32_t oh_cycles;
     int32_t  i;
     
@@ -761,13 +758,13 @@ void yieldTest(void)
 
     // Measure the overhead of updating the cycle count
 
-	register int state0 = portENTER_CRITICAL_NESTED();
+    register int state0 = portENTER_CRITICAL_NESTED();
 
     for (i = 0; i < 10; i++) {
-    	// Copied from yield_func to calibrate timing
-    	int state = portENTER_CRITICAL_NESTED();
-    	clock_vals[indx++] = xthal_get_ccount();
-    	portEXIT_CRITICAL_NESTED(state);
+        // Copied from yield_func to calibrate timing
+        int state = portENTER_CRITICAL_NESTED();
+        clock_vals[indx++] = xthal_get_ccount();
+        portEXIT_CRITICAL_NESTED(state);
     }
 
     portEXIT_CRITICAL_NESTED(state0);
@@ -778,18 +775,18 @@ void yieldTest(void)
     indx = 0; 
     
     // Launch test threads
-	uiTaskResponse[0] = uiTaskResponse[1] = uiTaskResponse[2] = 0;
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 2);
-	xTaskCreate( yield_func, "thd1", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY + 1, NULL );
-	xTaskCreate( yield_func, "thd2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], PERF_TEST_PRIORITY + 1, NULL );
-	xTaskCreate( yield_func, "thd3", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[2], PERF_TEST_PRIORITY + 1, NULL );
+    uiTaskResponse[0] = uiTaskResponse[1] = uiTaskResponse[2] = 0;
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 2);
+    xTaskCreate( yield_func, "thd1", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY + 1, NULL );
+    xTaskCreate( yield_func, "thd2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], PERF_TEST_PRIORITY + 1, NULL );
+    xTaskCreate( yield_func, "thd3", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[2], PERF_TEST_PRIORITY + 1, NULL );
 
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
     // Wait for them all to finish
     while (3 > (uiTaskResponse[0] + uiTaskResponse[1] + uiTaskResponse[2]))
-	{
-		vTaskDelay(50);
-	}
+    {
+        vTaskDelay(50);
+    }
 
     // Compute average values for solicited context switch
     stats_t solicited;
@@ -797,19 +794,19 @@ void yieldTest(void)
 
     // Throw first and last values containing delete tasks instructions (FreeRTOS) and such
     for (i = 5; i < indx - 3; i++) {
-    	if (clock_interrupted[i]) {
-    		i += 2; // Skip region perturbed by interrupt
-    		continue;
-    	}
+        if (clock_interrupted[i]) {
+            i += 2; // Skip region perturbed by interrupt
+            continue;
+        }
         uint32_t delta = clock_vals[i] - clock_vals[i-1];
         stats_update(&solicited, delta);
     }
 
     if (printStats)
         printf("Solicited context switch time        : avg %u max %u cycles [calibration %d]\n",
-        		(solicited.sum + solicited.cnt - 1) / solicited.cnt - oh_cycles,
-        		solicited.max - oh_cycles,
-        		oh_cycles);
+                (solicited.sum + solicited.cnt - 1) / solicited.cnt - oh_cycles,
+                solicited.max - oh_cycles,
+                oh_cycles);
 
     portbenchmarkIntWait();
     portbenchmarkPrint();
@@ -823,21 +820,21 @@ stats_t unsolicited_stats;
 void unsolicited_background()
 {
     while (!unsolicited_done) {
-		unsolicited_cycles = xthal_get_ccount();  // Keep recording the counter's value
-	}
+        unsolicited_cycles = xthal_get_ccount();  // Keep recording the counter's value
+    }
     vTaskDelete(NULL);
 }
 
 // Preempting task (we measure the unsolicited context switch time)
 void unsolicited_hipriority()
 {
-	int i;
-	for (i = 0; i < 16; i++) {
-		vTaskDelay(10); // Give time to background task
-		unsigned cycles = xthal_get_ccount() - unsolicited_cycles;
-		stats_update(&unsolicited_stats, cycles);
-	}
-	unsolicited_done = 1;
+    int i;
+    for (i = 0; i < 16; i++) {
+        vTaskDelay(10); // Give time to background task
+        unsigned cycles = xthal_get_ccount() - unsolicited_cycles;
+        stats_update(&unsolicited_stats, cycles);
+    }
+    unsolicited_done = 1;
     vTaskDelete(NULL);
 }
 
@@ -853,18 +850,18 @@ void unsolicitedTest(void)
     stats_reset(&unsolicited_stats);
 
     // Launch test threads
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 2);
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 2);
 
-	xTaskCreate( unsolicited_background, "thd_bg", configMINIMAL_STACK_SIZE, NULL, PERF_TEST_PRIORITY + 1, NULL );
-	xTaskCreate( unsolicited_hipriority, "thd_hi", configMINIMAL_STACK_SIZE, NULL, PERF_TEST_PRIORITY + 2, NULL );
+    xTaskCreate( unsolicited_background, "thd_bg", configMINIMAL_STACK_SIZE, NULL, PERF_TEST_PRIORITY + 1, NULL );
+    xTaskCreate( unsolicited_hipriority, "thd_hi", configMINIMAL_STACK_SIZE, NULL, PERF_TEST_PRIORITY + 2, NULL );
 
     portbenchmarkReset(); // If configBENCHMARK is enabled
 
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
 
-	// Wait for them all to finish
+    // Wait for them all to finish
     while (!unsolicited_done)
-    	vTaskDelay(50);
+        vTaskDelay(50);
 
     // Calibrate read counter function (approximate calibration)
     unsigned calib = xthal_get_ccount();
@@ -872,9 +869,9 @@ void unsolicitedTest(void)
 
     if (printStats)
         printf("Unsolicited context switch time      : avg %u max %u cycles [calibration %d]\n",
-        		(unsolicited_stats.sum + unsolicited_stats.cnt - 1) / unsolicited_stats.cnt - calib,
-        		unsolicited_stats.max - calib,
-        		calib);
+                (unsolicited_stats.sum + unsolicited_stats.cnt - 1) / unsolicited_stats.cnt - calib,
+                unsolicited_stats.max - calib,
+                calib);
 
     portbenchmarkPrint();
 }
@@ -884,73 +881,71 @@ void unsolicitedTest(void)
 //-----------------------------------------------------------------------------
 void semaphoreTest(void)
 {
-    int32_t  ret;
-
-	uiTaskResponse[1] = 0;
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-	xTaskCreate( sem_test, "sem_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], PERF_TEST_PRIORITY, NULL );
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 3);
-	while (!uiTaskResponse[1])
-	{
-		vTaskDelay(10);
-	}
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
+    uiTaskResponse[1] = 0;
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
+    xTaskCreate( sem_test, "sem_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], PERF_TEST_PRIORITY, NULL );
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 3);
+    while (!uiTaskResponse[1])
+    {
+        vTaskDelay(10);
+    }
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
 }
 
 void mutexTest(void)
 {
-	uiTaskResponse[0] = 0;
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-	xTaskCreate( mutex_test, "mutex_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY, NULL );
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
-	while (!uiTaskResponse[0])
-	{
-		vTaskDelay(10);
-	}
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
+    uiTaskResponse[0] = 0;
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
+    xTaskCreate( mutex_test, "mutex_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY, NULL );
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
+    while (!uiTaskResponse[0])
+    {
+        vTaskDelay(10);
+    }
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
 }
 
 void eventTest(void)
 {
-	uiTaskResponse[0] = 0;
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-	xTaskCreate( event_test, "event_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY, NULL );
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
-	while (!uiTaskResponse[0])
-	{
-		vTaskDelay(10);
-	}
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
+    uiTaskResponse[0] = 0;
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
+    xTaskCreate( event_test, "event_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY, NULL );
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
+    while (!uiTaskResponse[0])
+    {
+        vTaskDelay(10);
+    }
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
 }
 
 void queueTest(void)
 {
-	uiTaskResponse[0] = 0;
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-	xTaskCreate( msgq_test, "msgq_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY, NULL );
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
-	while (!uiTaskResponse[0])
-	{
-		vTaskDelay(10);
-	}
-	vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
+    uiTaskResponse[0] = 0;
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
+    xTaskCreate( msgq_test, "msgq_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], PERF_TEST_PRIORITY, NULL );
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
+    while (!uiTaskResponse[0])
+    {
+        vTaskDelay(10);
+    }
+    vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
 }
 
 void test(void* pArg)
 {
-	#if configBENCHMARK
-	printStats = 0;
-	printf("\nRunning in ISR benchmarking mode; context switch timing will not be reported since it is"
-			"affected by the benchmarking code. TURN OFF configBENCHMARK to obtain context switch timing.\n");
-	#endif
+    #if configBENCHMARK
+    printStats = 0;
+    printf("\nRunning in ISR benchmarking mode; context switch timing will not be reported since it is"
+            "affected by the benchmarking code. TURN OFF configBENCHMARK to obtain context switch timing.\n");
+    #endif
 
-	yieldTest();
-	unsolicitedTest();
-	semaphoreTest();
-	mutexTest();
-	eventTest();
-	queueTest();
-	exit(0);
+    yieldTest();
+    unsolicitedTest();
+    semaphoreTest();
+    mutexTest();
+    eventTest();
+    queueTest();
+    exit(0);
 }
 
 
@@ -975,17 +970,17 @@ int main(void)
 int main_perf_test(int argc, char *argv[])
 #endif
 {
-	/* Print some stack related numbers. */
-	printf("STK_INTEXC_EXTRA  = %d\nXT_STK_FRMSZ      = %d\nXT_CP_SIZE        = %d\n"
-	       "XT_XTRA_SIZE      = %d\nXT_USER_SIZE      = %d\nXT_STACK_MIN_SIZE = %d\n",
-	       STK_INTEXC_EXTRA, XT_STK_FRMSZ, XT_CP_SIZE, XT_XTRA_SIZE,
-	       XT_USER_SIZE, XT_STACK_MIN_SIZE);
+    /* Print some stack related numbers. */
+    printf("STK_INTEXC_EXTRA  = %d\nXT_STK_FRMSZ      = %d\nXT_CP_SIZE        = %d\n"
+           "XT_XTRA_SIZE      = %d\nXT_USER_SIZE      = %d\nXT_STACK_MIN_SIZE = %d\n",
+           STK_INTEXC_EXTRA, XT_STK_FRMSZ, XT_CP_SIZE, XT_XTRA_SIZE,
+           XT_USER_SIZE, XT_STACK_MIN_SIZE);
 
-	xTaskCreate( test, "test", configMINIMAL_STACK_SIZE, (void *)NULL, PERF_TEST_PRIORITY, NULL );
+    xTaskCreate( test, "test", configMINIMAL_STACK_SIZE, (void *)NULL, PERF_TEST_PRIORITY, NULL );
     /* Finally start the scheduler. */
-	vTaskStartScheduler();
-	/* Will only reach here if there is insufficient heap available to start
-	the scheduler. */
-	for( ;; );
-	return 0;
+    vTaskStartScheduler();
+    /* Will only reach here if there is insufficient heap available to start
+    the scheduler. */
+    for( ;; );
+    return 0;
 }

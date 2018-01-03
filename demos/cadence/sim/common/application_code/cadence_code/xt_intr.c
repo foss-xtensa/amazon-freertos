@@ -233,7 +233,6 @@ static void Task2(void* pvData)
 {
     uint32_t  uiReceivedMessage;
     uint32_t  i;
-    BaseType_t size;
     uint32_t  iok = 0;
     uint32_t  eok = 0;
     BaseType_t err = pdPASS;

@@ -152,7 +152,6 @@ void Task_Func(void *pdata)
     int val = (int) pdata;
     unsigned cnt = 0;
     void *test_p;
-    int err;
 
     srand(val);
 

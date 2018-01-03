@@ -159,7 +159,6 @@ static int test_alloca(void)
 static void Init_Task(void *pdata)
 {
     int ok;
-    int err;
 
     /* Call a function that does an alloca over my base save area. */
     ok = test_alloca();

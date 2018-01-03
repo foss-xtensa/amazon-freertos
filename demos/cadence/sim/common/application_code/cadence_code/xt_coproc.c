@@ -147,8 +147,6 @@ a specified number of iterations and returns the result.
 */
 static float crunch(unsigned n, float x, float z)
 {
-    int err;
-
     unsigned i,j;
     float mx = -x;
     float result = z;
@@ -197,8 +195,6 @@ static TaskHandle_t Task_TCB[4];
 
 void Task0(void *pdata)
 {
-    int err;
-
     result[0] = crunch(TASK0_PARAMS);
     if (result[0] == 0) result[0] = -1;
     vTaskDelete(NULL);
@@ -207,8 +203,6 @@ void Task0(void *pdata)
 
 void Task1(void *pdata)
 {
-    int err;
-
     result[1] = crunch(TASK1_PARAMS);
     if (result[1] == 0) result[1] = -1;
     vTaskDelete(NULL);
@@ -217,8 +211,6 @@ void Task1(void *pdata)
 
 void Task2(void *pdata)
 {
-    int err;
-
     result[2] = crunch(TASK2_PARAMS);
     if (result[2] == 0) result[2] = -1;
     vTaskDelete(NULL);
@@ -227,8 +219,6 @@ void Task2(void *pdata)
 
 void Task3(void *pdata)
 {
-    int err;
-
     result[3] = crunch(TASK3_PARAMS);
     if (result[3] == 0) result[3] = -1;
     vTaskDelete(NULL);

@@ -162,12 +162,11 @@ with leading spaces (padding) that can be useful for right-aligning columns of n
 */
 static char *put_u32dec(char buf[11], const unsigned n)
 {
-    unsigned    err = 0;
     char        *p, *l;
     unsigned    quo, rem;
 
     /* Print the number in reverse. */
-    buf[10] == '\0';
+    buf[10] = '\0';
     p = &buf[9];
     for (quo = n; quo >= 10; quo /= 10) {
         rem = quo % 10;
@@ -225,7 +224,6 @@ TaskHandle_t Count_Task_TCB;
 void Count_Task(void *pdata)
 {
     unsigned count = 0;
-    int err = 0;
 
     putline("[Count_Task] Started.");
 
