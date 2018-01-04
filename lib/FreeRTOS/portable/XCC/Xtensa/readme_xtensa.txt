@@ -1,7 +1,7 @@
     FreeRTOS Port for Xtensa Configurable and Diamond Processors
     ============================================================
 
-                FreeRTOS Version 9.0.0
+                FreeRTOS Version 10.0.0
 
 
 Introduction
@@ -11,7 +11,7 @@ This document describes the Xtensa port for FreeRTOS multitasking RTOS.
 For an introduction to FreeRTOS itself, please refer to FreeRTOS
 documentation.
 
-This port currently works with version 9.0.0.
+This port currently works with version 10.0.0.
 
 
 Xtensa Configuration Requirements and Restrictions
@@ -66,10 +66,17 @@ and drivers for any on-board devices you want to use.
 Installation
 ------------
 
-This port is downloaded in a ZIP file from FreeRTOS Web site. You will
-also need to obtain the common FreeRTOS source package from FreeRTOS's
-website in order to build the OS and applications. The Xtensa port files
-are not currently included in the common package.
+The Xtensa port of FreeRTOS is available at this location:
+
+    https://github.com/tensilica/freertos
+
+This download includes the core FreeRTOS source and include files needed
+to build the port. You can also download the official release of FreeRTOS
+version 10.0.0 or later from this location:
+
+    https://github.com/aws/amazon-freertos
+
+The Xtensa port files are currently not included in the common package.
 
 All source is provided along with a Makefile that works for any host
 platform supported by Xtensa Tools (Windows, Linux). These instructions
@@ -79,26 +86,24 @@ to other host platforms.
 First install the FreeRTOS common package in a directory of your choosing.
 The structure of that package will look like this:
 
-FreeRTOS
-|-- Demo
-|   |-- Common
-|   |   |-- Minimal
-|   |   `-- include
-|   |
-|   |-- Xtensa_XCC
-|       `-- ParTest
-|   
-`-- Source
-    |-- include
-    `-- portable
-        |-- MemMang
-        `-- XCC
-            `-- Xtensa
-
-Since the Xtensa specific files are currently unavailable in the common
-package, then you will need the separate zip file containing the Xtensa port
-files. Extract from that zip file the Source/portable/XCC and Demo/Xtensa_XCC
-folders and place them in the appropriate location under the common tree.
+<install directory>
+|-- demos
+|   `-- cadence
+|       `-- sim
+|           |-- common
+|           |   |-- application_code
+|           |   |   `-- cadence_code
+|           |   `-- config_files
+|           `-- xplorer
+`-- lib
+    |-- FreeRTOS
+    |   `-- portable
+    |       |-- Common
+    |       |-- MemMang
+    |       `-- XCC
+    |           `-- Xtensa
+    `-- include
+        `-- private
 
 The Xtensa Tools are available from Cadence as part of a processor
 license. Be sure you have installed the Xtensa Tools and your processor
@@ -108,10 +113,11 @@ configuration.
 Building FreeRTOS for Xtensa
 ----------------------------
 
-The Makefiles are provided for your convenience and you do not need to 
-use them. Essentially you need to compile all the FreeRTOS common files,
-the port files, and your application, and link them all. However all the
-build instructions in this note use the Makefiles.
+To build the FreeRTOS library and the example programs, go into the
+directory 'demos/cadence/sim' and use the makefile in that directory.
+"make all" will build all the examples. There is another makefile in
+the 'lib/FreeRTOS/portable/XCC/Xtensa' directory that builds just the
+FreeRTOS library.
 
 By default, you will build for the Xtensa instruction set simulator. If
 you have a supported emulation board, you can build to run on that. You
@@ -121,18 +127,20 @@ recommends doing functional development on the simulator because it
 is easier to debug with, then move to a board if/when you need to test
 hardware drivers or real-time performance.
 
-The provided Makefile simplifies building FreeRTOS and the example
+The provided makefile simplifies building FreeRTOS and the example
 for your Xtensa configuration and platform (ISS, board, etc.). There
-are detailed instructions in the comment at the top of the Makefile.
-The test/Makefile provides similar support for building the tests,
-and may be invoked directly from the top level Makefile.
+are detailed instructions in the comments at the top of the makefile.
 
-The Makefiles work on any host platform and support incremental builds.
+The makefiles work on Windows and Linux and support incremental builds.
 The build for each Xtensa configuration and target platform is placed in
 a subdirectory so several core and platform builds can co-exist even with
 incremental rebuilds. You may specify the root of the build area (if tou
 want it to be elsewhere than under the source tree) by defining BLDROOT
 either in the make command or your shell environment.
+
+
+Building the FreeRTOS Library
+-----------------------------
 
 First, be sure you have installed Xtensa Tools and your processor
 configuration, and be sure that Xtensa Tools are in your search path.
@@ -141,7 +149,7 @@ makefiles.
 
 Change directories to the Xtensa port directory:
 
-> cd FreeRTOS/Source/portable/XCC/Xtensa
+> cd lib/FreeRTOS/portable/XCC/Xtensa
 
 Now build the FreeRTOS RTOS as a library (libfreertos.a) as follows:
 
@@ -170,29 +178,31 @@ After the library has been built, you must link your application with this
 library in order to use FreeRTOS.
 
 
-Building a FreeRTOS Application
--------------------------------
+Building the FreeRTOS Examples
+------------------------------
 
-The provided FreeRTOS example is designed to run on the Xtensa instruction
-set simulator (ISS) or a supported evaluation board programmed with your
+The provided examples are designed to run on the Xtensa instruction set
+simulator (ISS) or a supported evaluation board programmed with your
 Xtensa processor configuration.
 
-To build the example for the default platform (simulator):
+To build the examples for the default platform (simulator):
 
-> xt-make example
+> cd demos/cadence/sim
+
+> xt-make all
 
 which is the same as
 
-> xt-make example TARGET=sim
+> xt-make all TARGET=sim
 
 The boards currently supported are the Xilinx ML605 and KC705 FPGA
 development boards. To target these boards, type
 
-> xt-make example TARGET=ml605
+> xt-make all TARGET=ml605
 
 or
 
-> xt-make example TARGET=kc705
+> xt-make all TARGET=kc705
 
 To build in a location other than the default, specify the new location
 using the BLDROOT variable. Note that this makefile will invoke the 
@@ -202,17 +212,14 @@ parameters based on what you specified.
 You can override the default compilation options by specifying the new
 options via CFLAGS. For example:
 
-> xt-make example TARGET=sim CFLAGS="-O2 -Os -g"
+> xt-make all TARGET=sim CFLAGS="-O2 -Os -g"
 
-This compiles example.c and links it with the FreeRTOS library
+This compiles the examples and links them with the FreeRTOS library
 libfreertos.a and the appropriate linker-support package (LSP) for your
 target platform (you can override the LSP by adding LSP=<lsp> to the
-xt-make command line). The resulting file example.exe is an ELF binary
-file that can be downloaded and executed on the target.
-
-The example.exe binary appears in the platform specific subdirectory
-described earlier.  For the following commands, change to that directory
-or prepend it as the path of example.exe.
+xt-make command line). The resulting ELF files can be downloaded and
+executed on the target. The example binaries appear in the platform
+specific subdirectory described earlier.
 
 To build your application with thread-safe C library support, you
 need to make certain modifications to the application to plug in and
@@ -240,13 +247,6 @@ saving the context for the C library as well as the coprocessors if any.
 E.g. if your task requires 2000 bytes of stack space, you must allocate
 (2000 + XT_STACK_EXTRA_CLIB) bytes for the stack.
 
-To build the example with thread-safe C library support:
-
-> xt-make CFLAGS="-O0" example
-
-The "-O0" is necessary because you are overriding the default COPT=-O0.
-You can specify any optimization level you require (if none, the compiler
-defaults to -O2).
 
 IMPORTANT NOTE
 --------------
@@ -759,25 +759,6 @@ Overlay Support
     supported in a future release. Make sure that the option XT_USE_OVLY is
     never defined when building.
 
-
-Note on Porting Methodology and Copyrights
-------------------------------------------
-
-This port is based on a well-tested Cadence RTOS porting layer
-that abstracts out Xtensa-generic aspects from the RTOS specifics
-in the same way most RTOSes abstract out their generic code from the
-architecture specific port code. This code is common to several RTOSes
-ported by Cadence, and deals with highly Xtensa specific aspects such
-as context save/restore, interrupt and exception dispatch, and handling
-of co-processor, alloc and window over/underflow exceptions.
-
-The porting layer files are prefixed "xtensa_" and belong to Cadence
-(they are provided freely as part of this port but are not subject to
-FreeRTOS's copyright). The rest of the port is FreeRTOS specific and
-are under FreeRTOS's copyright.
-
-The Makefiles are also provided by Cadence so have much in common with
-other RTOS Makefiles provided by Cadence.
 
 -End-
 

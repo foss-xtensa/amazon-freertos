@@ -226,8 +226,8 @@ Xtensa Port Version.
 
 *******************************************************************************/
 
-#define XTENSA_PORT_VERSION             1.5
-#define XTENSA_PORT_VERSION_STRING      "1.5"
+#define XTENSA_PORT_VERSION             1.6
+#define XTENSA_PORT_VERSION_STRING      "1.6"
 
 #endif /* XTENSA_RTOS_H */
 

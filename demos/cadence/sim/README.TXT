@@ -9,24 +9,22 @@ How to build and run the tests
 To build the tests, run "make all" in this directory. This will build
 the following files under the build/ subdirectory -
 
-    xtensa_demo.elf -- FreeRTOS demo program
-
-    example.elf     -- Simple Xtensa demo program
+    example.exe     -- Simple Xtensa demo program
     
-    perf_test.elf   -- Performance benchmarking
+    perf_test.exe   -- Performance benchmarking
 
-    xt_coproc.elf   -- Xtensa coprocessor exerciser demo
+    xt_coproc.exe   -- Xtensa coprocessor exerciser demo
     
-    xt_alloca.elf   -- Xtensa alloca exception demo
+    xt_alloca.exe   -- Xtensa alloca exception demo
     
-    xt_clib.elf     -- Xtensa C lib demo (Newlib)
+    xt_clib.exe     -- Xtensa C lib demo (Newlib)
 
-    xt_intr.elf     -- Xtensa interrupt test
+    xt_intr.exe     -- Xtensa interrupt test
 
 To build a minimal-size test, run "make small". This will build the
 following test in build/ -
 
-    small_test.elf  -- Small size test
+    small_test.exe  -- Small size test
 
 This test modifies the configuration to minimize the code and data
 size. See the FreeRTOSConfig.h file for the changes from the default
@@ -53,14 +51,18 @@ To build the tests for your own hardware, you must provide the correct
 linker script (LSP) and your own board support package. See the makefile
 and refer to Xtensa tools documentation for more details.
 
-The FreeRTOS demo program xtensa_demo.elf can run in medium or full mode.
-Edit the macro TEST_MODE at the beginning of main.c to select either Xtensa demo,
-or FreeRTOS medium/full demo. Note that there is a separate project with FreeRTOS
-small demo (with its own lightweight FreeRTOSConfig.h).
-
 If you build from Xplorer, remember to enable -mlongcalls in the Assembler
 options for certain targets (e.g. when you get the linker warning: dangerous
 relocation).
+
+
+Notes for version 1.6
+---------------------
+
+- This version supports FreeRTOS version 10.0.0.
+
+- The directory structure and makefiles have been reorganized to conform
+  to the structure of FreeRTOS version 10.0.0.
 
 
 Notes for version 1.5
