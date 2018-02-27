@@ -68,7 +68,7 @@ Installation
 
 The Xtensa port of FreeRTOS is available at this location:
 
-    https://github.com/tensilica/freertos
+    https://github.com/foss-xtensa/amazon-freertos
 
 This download includes the core FreeRTOS source and include files needed
 to build the port. You can also download the official release of FreeRTOS
@@ -76,7 +76,7 @@ version 10.0.0 or later from this location:
 
     https://github.com/aws/amazon-freertos
 
-The Xtensa port files are currently not included in the common package.
+The Xtensa port files are currently not included in the official package.
 
 All source is provided along with a Makefile that works for any host
 platform supported by Xtensa Tools (Windows, Linux). These instructions

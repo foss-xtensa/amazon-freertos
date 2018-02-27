@@ -4,20 +4,14 @@ For more information on getting started with your download, refer to the [Gettin
 
 For more information on Amazon FreeRTOS, refer to the [Amazon FreeRTOS User Guide](https://aws.amazon.com/documentation/freertos).
 
-## Hardware Requirements
+For more information on using the Xtensa port, refer to the files:
 
-Use the following MCU hardware to get started:
-1. **Texas Instruments** - [CC3220SF-LAUNCHXL](http://www.ti.com/tool/cc3220sf-launchxl).
-2. **STMicroelectronics** - [STM32L4 Discovery kit IoT node](http://www.st.com/en/evaluation-tools/b-l475e-iot01a.html).
-3. **NXP** - [LPC54018 IoT Module](http://www.nxp.com/LPC-AWS-Module).
+    lib/FreeRTOS/portable/XCC/Xtensa/readme_xtensa.txt
+    demos/cadence/sim/README.TXT 
 
-To evaluate Amazon FreeRTOS without using an MCU-based hardware, use the following:
-1. **Windows Simulator** - Microsoft Windows 7 or newer, with at least a dual core and a hard-wired Ethernet connection.
+## Xtensa Development Environment
 
-## Development Environment
+Building and running the Xtensa port and included examples requires the Xtensa toolchain and instruction set simulator. The open source GCC-based toolchain cannot currently be used for this.
 
-Based on your MCU hardware, download one of the following Integrated Development Environments (IDEs):
-1. **Texas Instruments** - [Code Composer Studio](http://www.ti.com/tools-software/ccs.html).
-2. **STMicroelectronics** - [STM32 System Workbench](http://openstm32.org/HomePage).
-3. **NXP** - [IAR Embedded Workbench](https://www.iar.com/iar-embedded-workbench/partners/nxp).
-4. **Windows Simulator** - [Visual Studio Community Edition](https://www.visualstudio.com/downloads/).
+The examples are set up to run on the simulator. To run them on your target board, some changes may be required. refer to the readmes for details.
+
