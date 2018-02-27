@@ -1,7 +1,7 @@
     FreeRTOS Port for Xtensa Configurable and Diamond Processors
     ============================================================
 
-                FreeRTOS Version 10.0.0
+                FreeRTOS Kernel Version 10.0.0
 
 
 Introduction
@@ -11,7 +11,7 @@ This document describes the Xtensa port for FreeRTOS multitasking RTOS.
 For an introduction to FreeRTOS itself, please refer to FreeRTOS
 documentation.
 
-This port currently works with version 10.0.0.
+This port currently works with FreeRTOS kernel version 10.0.0.
 
 
 Xtensa Configuration Requirements and Restrictions
@@ -72,7 +72,7 @@ The Xtensa port of FreeRTOS is available at this location:
 
 This download includes the core FreeRTOS source and include files needed
 to build the port. You can also download the official release of FreeRTOS
-version 10.0.0 or later from this location:
+version 1.0.0 or later from this location:
 
     https://github.com/aws/amazon-freertos
 
