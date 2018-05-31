@@ -56,6 +56,18 @@ options for certain targets (e.g. when you get the linker warning: dangerous
 relocation).
 
 
+Notes for version 1.7
+---------------------
+
+- portSTACK_TYPE changed to uint32_t from uint8_t. Stack size definitions
+  adjusted accordingly.
+
+- portYIELD_FROM_ISR changed to call _frxt_setup_switch conditionally.
+
+- Tick handler calls xTaskIncrementTick inside critical region to prevent
+  interrupt nesting issues.
+
+
 Notes for version 1.6
 ---------------------
 
