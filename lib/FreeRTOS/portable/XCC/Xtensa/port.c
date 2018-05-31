@@ -225,14 +225,20 @@ BaseType_t xPortStartScheduler( void )
 BaseType_t xPortSysTickHandler( void )
 {
 	BaseType_t ret;
+	uint32_t interruptMask;
 
 	portbenchmarkIntLatency();
 
-	ret = xTaskIncrementTick();
-	if( ret != pdFALSE )
+	/* Interrupts upto configMAX_SYSCALL_INTERRUPT_PRIORITY must be
+	 * disabled before calling xTaskIncrementTick as it access the
+	 * kernel lists. */
+	interruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
 	{
-		portYIELD_FROM_ISR();
+		ret = xTaskIncrementTick();
 	}
+	portCLEAR_INTERRUPT_MASK_FROM_ISR( interruptMask );
+
+	portYIELD_FROM_ISR( ret );
 
 	return ret;
 }

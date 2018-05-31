@@ -99,7 +99,7 @@ extern "C" {
 #define portDOUBLE		double
 #define portLONG		int32_t
 #define portSHORT		int16_t
-#define portSTACK_TYPE	uint8_t
+#define portSTACK_TYPE	uint32_t
 #define portBASE_TYPE	int
 
 typedef portSTACK_TYPE			StackType_t;
@@ -155,7 +155,11 @@ static inline unsigned portENTER_CRITICAL_NESTED() { unsigned state = XTOS_SET_I
 void vPortYield( void );
 void _frxt_setup_switch( void );
 #define portYIELD()       vPortYield()
-#define portYIELD_FROM_ISR()		_frxt_setup_switch()
+#define portYIELD_FROM_ISR( xHigherPriorityTaskWoken )	\
+	if ( ( xHigherPriorityTaskWoken ) != 0 ) {	\
+		_frxt_setup_switch();			\
+	}
+
 /*-----------------------------------------------------------*/
 
 /* Task function macros as described on the FreeRTOS.org WEB site. */
