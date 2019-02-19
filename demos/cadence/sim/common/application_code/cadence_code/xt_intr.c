@@ -72,9 +72,10 @@ volatile int iExcCount = 0;
 #define     TASK_STK_SIZE_STD       (0x1000 + XT_STACK_EXTRA_CLIB)
 
 /* Queue for passing count. */
-#define     QUEUE_SIZE          16
-#define		SEM_CNT				32
-QueueHandle_t	xQueue;
+#define     QUEUE_SIZE              16
+#define     SEM_CNT                 32
+
+QueueHandle_t xQueue;
 
 /* Semaphore for test. */
 SemaphoreHandle_t xSem;
@@ -87,7 +88,7 @@ uint32_t  uiTask1MessagesSent;
 uint32_t  uiTask2Counter;
 uint32_t  uiTask2MessagesReceived;
 
-/* Task TaskHanles */
+/* Task handles */
 TaskHandle_t      xTask0Handle;
 TaskHandle_t      xTask1Handle;
 TaskHandle_t      xTask2Handle;
@@ -117,7 +118,7 @@ void softwareIntHandler(void* arg)
     int err;
 
     /* Signal the semaphore */
-	err = xSemaphoreGive(xSem);
+    err = xSemaphoreGive(xSem);
 
 #ifdef XT_USE_SWPRI
     if (uiSwInt2Num) {
@@ -171,7 +172,7 @@ static void Task0(void* pvData)
         uiTask0Counter++;
 
         /* Sleep for 10 ticks.  */
-		vTaskDelay(10);
+        vTaskDelay(10);
     }
 }
 
@@ -204,7 +205,7 @@ static void Task1(void *pvData)
         uiTask1Counter++;
 
         /* Send message to queue 0 */
-		err = xQueueSend(xQueue, &uiTask1MessagesSent, portMAX_DELAY);
+        err = xQueueSend(xQueue, &uiTask1MessagesSent, portMAX_DELAY);
         if (err != pdPASS)
             break;
 
@@ -240,12 +241,12 @@ static void Task2(void* pvData)
     /* This task retrieves messages placed on the queue by task 1 */
     for (i = 0; i < TEST_ITER; i++) {
         /* Wait for the semaphore to be signalled */
-		xSemaphoreTake(xSem, portMAX_DELAY);
+        xSemaphoreTake(xSem, portMAX_DELAY);
         /* Increment the task counter */
         uiTask2Counter++;
 
         /* Retrieve a message from the queue */
-		err = xQueueReceive(xQueue, &uiReceivedMessage, portMAX_DELAY);
+        err = xQueueReceive(xQueue, &uiReceivedMessage, portMAX_DELAY);
 
         /* Check completion status and make sure the message is what we
            expected */
@@ -320,10 +321,10 @@ static void initTask(void* pvData)
     /* Create test semaphore. */
     xSem = xSemaphoreCreateCounting( SEM_CNT, 0 );
     /* Create queue for sequence of counts. */
-	xQueue = xQueueCreate(QUEUE_SIZE, 1 * sizeof(uint32_t));
+    xQueue = xQueueCreate(QUEUE_SIZE, 1 * sizeof(uint32_t));
 
     /* Create the 3 test tasks. */
-	err = xTaskCreate(Task0, "Task0", TASK_STK_SIZE_STD, (void*)0, TASK_0_PRIO, xTask0Handle);
+    err = xTaskCreate(Task0, "Task0", TASK_STK_SIZE_STD, (void*)0, TASK_0_PRIO, &xTask0Handle);
 
     if (err != pdPASS)
     {
@@ -331,7 +332,7 @@ static void initTask(void* pvData)
         goto done;
     }
 
-	err = xTaskCreate(Task1, "Task1", TASK_STK_SIZE_STD, (void*)0, TASK_1_PRIO, xTask1Handle);
+    err = xTaskCreate(Task1, "Task1", TASK_STK_SIZE_STD, (void*)0, TASK_1_PRIO, &xTask1Handle);
 
     if (err != pdPASS)
     {
@@ -339,7 +340,7 @@ static void initTask(void* pvData)
         goto done;
     }
 
-	err = xTaskCreate(Task2, "Task2", TASK_STK_SIZE_STD, (void*)0, TASK_2_PRIO, xTask2Handle);
+    err = xTaskCreate(Task2, "Task2", TASK_STK_SIZE_STD, (void*)0, TASK_2_PRIO, &xTask2Handle);
 
     if (err != pdPASS)
     {
@@ -384,9 +385,9 @@ int main(void)
 int main_xt_intr(int argc, char *argv[])
 #endif
 {
-	uint32_t uiSwInts = 0;
+    uint32_t uiSwInts = 0;
     uint32_t x = 0;
-	 /* Unbuffer stdout */
+    /* Unbuffer stdout */
     setbuf(stdout, 0);
 
     puts("Xtensa interrupt/exception test (xt_intr) running...");
@@ -444,11 +445,12 @@ int main_xt_intr(int argc, char *argv[])
         puts("Warning: second sw interrupt not found, sw priority cannot be tested.");
     }
 #endif
-	xTaskCreate( initTask, "initTask", configMINIMAL_STACK_SIZE, (void *)NULL, INIT_TASK_PRIO, NULL );
+    xTaskCreate( initTask, "initTask", configMINIMAL_STACK_SIZE, (void *)NULL, INIT_TASK_PRIO, NULL );
     /* Finally start the scheduler. */
-	vTaskStartScheduler();
-	/* Will only reach here if there is insufficient heap available to start
-	the scheduler. */
-	for( ;; );
-	return 0;
+    vTaskStartScheduler();
+    /* Will only reach here if there is insufficient heap available to start
+       the scheduler. */
+    for( ;; );
+    return 0;
 }
+
