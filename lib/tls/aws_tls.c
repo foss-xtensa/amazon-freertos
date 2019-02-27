@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS TLS V1.0.0
+ * Amazon FreeRTOS TLS V1.1.0
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -75,6 +74,8 @@ typedef struct TLSContext
     const char * pcDestination;
     const char * pcServerCertificate;
     uint32_t ulServerCertificateLength;
+    const char ** ppcAlpnProtocols;
+    uint32_t ulAlpnProtocolsCount;
 
     NetworkRecv_t pxNetworkRecv;
     NetworkSend_t pxNetworkSend;
@@ -405,6 +406,8 @@ BaseType_t TLS_Init( void ** ppvContext,
         pCtx->pcDestination = pxParams->pcDestination;
         pCtx->pcServerCertificate = pxParams->pcServerCertificate;
         pCtx->ulServerCertificateLength = pxParams->ulServerCertificateLength;
+        pCtx->ppcAlpnProtocols = pxParams->ppcAlpnProtocols;
+        pCtx->ulAlpnProtocolsCount = pxParams->ulAlpnProtocolsCount;
         pCtx->pxNetworkRecv = pxParams->pxNetworkRecv;
         pCtx->pxNetworkSend = pxParams->pxNetworkSend;
         pCtx->pvCallerContext = pxParams->pvCallerContext;
@@ -482,6 +485,15 @@ BaseType_t TLS_Connect( void * pvContext )
         xResult = prvInitializeClientCredential( pCtx );
     }
 
+    if( 0 == xResult && NULL != pCtx->ppcAlpnProtocols )
+    {
+        /* Include an application protocol list in the TLS ClientHello 
+         * message. */
+        xResult = mbedtls_ssl_conf_alpn_protocols( 
+            &pCtx->mbedSslConfig, 
+            pCtx->ppcAlpnProtocols );
+    }
+
     if( 0 == xResult )
     {
         /* Set the resulting protocol configuration. */
@@ -504,9 +516,7 @@ BaseType_t TLS_Connect( void * pvContext )
                              NULL );
 
         /* Negotiate. */
-        xResult = mbedtls_ssl_handshake( &pCtx->mbedSslCtx );
-
-        while( 0 != xResult )
+        while( 0 != ( xResult = mbedtls_ssl_handshake( &pCtx->mbedSslCtx ) ) )
         {
             if( ( MBEDTLS_ERR_SSL_WANT_READ != xResult ) &&
                 ( MBEDTLS_ERR_SSL_WANT_WRITE != xResult ) )

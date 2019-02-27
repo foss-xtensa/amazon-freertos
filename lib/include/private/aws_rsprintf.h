@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -37,7 +36,7 @@
 #include <stdint.h>
 /* #include <unistd.h> */
 #include <stdarg.h>
-#include "aws_ts_ota_types.h"
+#include "aws_ota_types.h"
 
 #define kH32_MaxPlaces 8							/* Maximum number of output digits of the szH32 function. */
 #define kU32_MaxPlaces 10							/* Maximum number of output digits of the szU32 function. */

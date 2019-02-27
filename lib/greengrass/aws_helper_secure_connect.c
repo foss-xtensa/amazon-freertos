@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS Greengrass Discovery V1.0.0
+ * Amazon FreeRTOS Greengrass Discovery V1.0.2
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -187,10 +186,6 @@ void GGD_SecureConnect_Disconnect( Socket_t * pxSocket )
     TimeOut_t xTimeOut;
     char cBuf; /*lint !e971 can use char without signed/unsigned. */
 
-    #if ( configUSE_TRACE_FACILITY == 1 && configRECORD_STACK_HIGH_ADDRESS == 1 )
-        TaskStatus_t xTaskStatus;
-    #endif
-
     configASSERT( pxSocket != NULL );
     configASSERT( *pxSocket != SOCKETS_INVALID_SOCKET );
     ggdconfigPRINT( "About to close socket.\r\n" );
@@ -221,15 +216,11 @@ void GGD_SecureConnect_Disconnect( Socket_t * pxSocket )
     *pxSocket = SOCKETS_INVALID_SOCKET;
     ggdconfigPRINT( "Socket closed.\r\n" );
 
-    #if ( configUSE_TRACE_FACILITY == 1 && configRECORD_STACK_HIGH_ADDRESS == 1 )
+    #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
         {
-            vTaskGetInfo( NULL,             /* MQTT Task status. */
-                          &( xTaskStatus ), /* Output parameter. */
-                          pdTRUE,           /* Include the stack high watermark in xTaskStatus. */
-                          eRunning          /* Do not include the task state in xTaskStatus as MQTT task is already running. */
-                          );
-
-            configPRINTF( ( "Stack high watermark for GGD task: %u\r\n", xTaskStatus.usStackHighWaterMark ) );
+            configPRINTF( (
+                              "Stack high watermark for discovery helper task: %u.\r\n",
+                              uxTaskGetStackHighWaterMark( NULL ) ) );
         }
     #endif
 }
@@ -240,18 +231,47 @@ BaseType_t GGD_SecureConnect_Send( const char * pcPayload, /*lint !e971 can use 
                                    const uint32_t ulPayloadSize,
                                    const Socket_t xSocket )
 {
-    BaseType_t xStatus;
+    BaseType_t xStatus = pdFAIL;
+    uint32_t ulBytesSent = 0;
+    int32_t lSendRetVal;
 
     configASSERT( pcPayload != NULL );
 
-    /* Request the green grass core JSON file. */
-    if( SOCKETS_Send( xSocket,
-                      ( const unsigned char * ) pcPayload,
-                      ( size_t ) ulPayloadSize,
-                      ( uint32_t ) 0 ) != ( int32_t ) ( ulPayloadSize ) )
+    /* Keep re-trying until timeout or any error
+     * other than SOCKETS_EWOULDBLOCK occurs. */
+
+    if( ulPayloadSize > 0 )
     {
-        ggdconfigPRINT( "SecureConnect - error sending secure data to network\r\n" );
-        xStatus = pdFAIL;
+        while( ulBytesSent < ulPayloadSize )
+        {
+            /* Try sending the remaining data. */
+            lSendRetVal = SOCKETS_Send( xSocket,
+                                        ( const unsigned char * ) &pcPayload[ ulBytesSent ],
+                                        ( size_t ) ( ulPayloadSize - ulBytesSent ),
+                                        ( uint32_t ) 0 );
+
+            /* A negative return value from SOCKETS_Send
+             * means some error occurred. */
+            if( lSendRetVal < 0 )
+            {
+                break;
+            }
+            else
+            {
+                /* Update the count of sent bytes. */
+                ulBytesSent += ( uint32_t ) lSendRetVal;
+            }
+        }
+
+        if( ulBytesSent == ulPayloadSize )
+        {
+            xStatus = pdPASS;
+        }
+        else
+        {
+            ggdconfigPRINT( "SecureConnect - error sending secure data to network\r\n" );
+            xStatus = pdFAIL;
+        }
     }
     else
     {

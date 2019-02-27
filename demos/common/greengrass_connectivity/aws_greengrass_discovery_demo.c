@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS Greengrass Demo V1.0.0
+ * Amazon FreeRTOS Greengrass Demo V1.2.1
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -43,7 +42,6 @@
 #include "semphr.h"
 
 /* Greengrass includes. */
-#include "aws_greengrass_discovery_demo.h"
 #include "aws_ggd_config.h"
 #include "aws_ggd_config_defaults.h"
 #include "aws_greengrass_discovery.h"
@@ -55,13 +53,11 @@
 /* Demo includes. */
 #include "aws_demo_config.h"
 
-#define ggdDEMO_MAX_MQTT_MESSAGES      10
+#define ggdDEMO_MAX_MQTT_MESSAGES      3
 #define ggdDEMO_MAX_MQTT_MSG_SIZE      500
 #define ggdDEMO_DISCOVERY_FILE_SIZE    2500
 #define ggdDEMO_MQTT_MSG_TOPIC         "freertos/demos/ggd"
-#define ggdDEMO_MQTT_MSG_DISCOVERY1    "Message from Thing to Greengrass Core: Address of Greengrass Core found! %s\n"
-#define ggdDEMO_MQTT_MSG_DISCOVERY2    "Message from Thing to Greengrass Core: Hello world msg #%ld!\n"
-
+#define ggdDEMO_MQTT_MSG_DISCOVERY     "{\"message\":\"Hello #%lu from Amazon FreeRTOS to Greengrass Core.\"}"
 
 /**
  * @brief Contains the user data for callback processing.
@@ -110,23 +106,9 @@ static void prvSendMessageToGGC( GGD_HostAddressData_t * pxHostAddressData )
         xPublishParams.pucTopic = ( const uint8_t * ) pcTopic;
         xPublishParams.usTopicLength = ( uint16_t ) ( strlen( pcTopic ) );
 
-        xPublishParams.ulDataLength = ( uint32_t ) sprintf( cBuffer, /*lint !e586 sprintf can be used for specific demo. */
-                                                            ggdDEMO_MQTT_MSG_DISCOVERY1,
-                                                            pxHostAddressData->pcHostAddress );
-        xPublishParams.pvData = cBuffer;
-
-        xReturnCode = MQTT_AGENT_Publish( xMQTTClientHandle,
-                                          &xPublishParams,
-                                          xMaxCommandTime );
-
-        if( xReturnCode != eMQTTAgentSuccess )
-        {
-            configPRINTF( ( "mqtt_client - Failure to publish \n" ) );
-        }
-
         for( ulMessageCounter = 0; ulMessageCounter < ( uint32_t ) ggdDEMO_MAX_MQTT_MESSAGES; ulMessageCounter++ )
         {
-            xPublishParams.ulDataLength = ( uint32_t ) sprintf( cBuffer, ggdDEMO_MQTT_MSG_DISCOVERY2, ulMessageCounter ); /*lint !e586 sprintf can be used for specific demo. */
+            xPublishParams.ulDataLength = ( uint32_t ) sprintf( cBuffer, ggdDEMO_MQTT_MSG_DISCOVERY, ( long unsigned int ) ulMessageCounter ); /*lint !e586 sprintf can be used for specific demo. */
             xPublishParams.pvData = cBuffer;
             xReturnCode = MQTT_AGENT_Publish( xMQTTClientHandle,
                                               &xPublishParams,
@@ -175,12 +157,13 @@ static BaseType_t prvMQTTConnect( GGD_HostAddressData_t * pxHostAddressData )
     xConnectParams.usClientIdLength = ( uint16_t ) ( strlen( clientcredentialIOT_THING_NAME ) );
     xConnectParams.pcURL = pxHostAddressData->pcHostAddress;
     xConnectParams.usPort = clientcredentialMQTT_BROKER_PORT;
-    xConnectParams.xURLIsIPAddress = pdTRUE;
+    xConnectParams.xFlags = mqttagentREQUIRE_TLS | mqttagentURL_IS_IP_ADDRESS;
+    xConnectParams.xURLIsIPAddress = pdTRUE; /* Deprecated. */
     xConnectParams.pcCertificate = pxHostAddressData->pcCertificate;
     xConnectParams.ulCertificateSize = pxHostAddressData->ulCertificateSize;
     xConnectParams.pvUserData = NULL;
     xConnectParams.pxCallback = NULL;
-    xConnectParams.xSecuredConnection = pdTRUE;
+    xConnectParams.xSecuredConnection = pdTRUE; /* Deprecated. */
 
     if( MQTT_AGENT_Connect( xMQTTClientHandle,
                             &xConnectParams,
@@ -206,21 +189,31 @@ static void prvDiscoverGreenGrassCore( void * pvParameters )
     {
         memset( &xHostAddressData, 0, sizeof( xHostAddressData ) );
 
-        /******* DEMO: automated connection. ********/
-        configPRINTF( ( "Attempting automated selection of greengrass device\r\n" ) );
+        /* Demonstrate automated connection. */
+        configPRINTF( ( "Attempting automated selection of Greengrass device\r\n" ) );
 
         if( GGD_GetGGCIPandCertificate( pcJSONFile,
                                         ggdDEMO_DISCOVERY_FILE_SIZE,
                                         &xHostAddressData )
             == pdPASS )
         {
-            configPRINTF( ( "GreenGrass device discovered!\r\n" ) );
-            configPRINTF( ( "Establishing MQTT communication with the device\r\n" ) );
+            configPRINTF( ( "Greengrass device discovered.\r\n" ) );
+            configPRINTF( ( "Establishing MQTT communication to Greengrass...\r\n" ) );
             prvSendMessageToGGC( &xHostAddressData );
+
+            /* Report on space efficiency of this demo task. */
+            #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
+                {
+                    configPRINTF(
+                        ( "Heap low watermark: %u. Stack high watermark: %u.\r\n",
+                          xPortGetMinimumEverFreeHeapSize(),
+                          uxTaskGetStackHighWaterMark( NULL ) ) );
+                }
+            #endif
         }
         else
         {
-            configPRINTF( ( "Auto-connect: Failed to retrieve Greengrass address and certificate\r\n" ) );
+            configPRINTF( ( "Auto-connect: Failed to retrieve Greengrass address and certificate.\r\n" ) );
         }
     }
 

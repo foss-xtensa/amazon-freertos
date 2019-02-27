@@ -1,6 +1,6 @@
 /*
- * Amazon FreeRTOS Secure Sockets for CC32220SF_LaunchpadXL V1.0.0
- * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved. 
+ * Amazon FreeRTOS Secure Sockets for CC3220SF-LAUNCHXL V1.0.2
+ * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -48,47 +47,59 @@
 /**
  * @brief Custom root CA.
  */
-#define securesocketsSECURE_FILE_NAME_CUSTOMROOTCA    "/certs/CustomRootCA.crt"
+#define securesocketsSECURE_FILE_NAME_CUSTOMROOTCA      "/certs/CustomRootCA.crt"
 
 /**
  * @brief Root CA.
  */
-#define securesocketsSECURE_FILE_NAME_ROOTCA          "/certs/RootCA.crt"
+#define securesocketsSECURE_FILE_NAME_ROOTCA            "/certs/RootCA.crt"
 
 /**
  * @brief Client certificate.
  */
-#define securesocketsSECURE_FILE_NAME_CLIENTCERT      "/certs/ClientCert.crt"
+#define securesocketsSECURE_FILE_NAME_CLIENTCERT        "/certs/ClientCert.crt"
 
 /**
  * @brief Client private key.
  */
-#define securesocketsSECURE_FILE_NAME_PRIVATEKEY      "/certs/PrivateKey.key"
+#define securesocketsSECURE_FILE_NAME_PRIVATEKEY        "/certs/PrivateKey.key"
 
 /**
  * @brief Maximum number of sockets.
  *
  * 16 Sockets including up to 6 connected secure sockets.
  */
-#define securesocketsMAX_NUM_SOCKETS                  16
+#define securesocketsMAX_NUM_SOCKETS                    16
 
 /**
  * @brief A Flag to indicate whether or not a socket is
  * secure i.e. it uses TLS or not.
  */
-#define securesocketsSOCKET_SECURE_FLAG               ( 1UL << 0 )
+#define securesocketsSOCKET_SECURE_FLAG                 ( 1UL << 0 )
 
 /**
  * @brief A flag to indicate whether or not a socket is closed
  * for receive.
  */
-#define securesocketsSOCKET_READ_CLOSED_FLAG          ( 1UL << 1 )
+#define securesocketsSOCKET_READ_CLOSED_FLAG            ( 1UL << 1 )
 
 /**
  * @brief A flag to indicate whether or not a socket is closed
  * for send.
  */
-#define securesocketsSOCKET_WRITE_CLOSED_FLAG         ( 1UL << 2 )
+#define securesocketsSOCKET_WRITE_CLOSED_FLAG           ( 1UL << 2 )
+
+/**
+ * @brief A flag to indicate whether or not a non-default server
+ * certificate has been bound to the socket.
+ */
+#define securesocketsSOCKET_TRUSTED_SERVER_CERT_FLAG    ( 1UL << 3 )
+
+/**
+ * @brief A flag to indicate whether or not the socket is connected.
+ *
+ */
+#define securesocketsSOCKET_IS_CONNECTED                ( 1UL << 4 )
 
 /**
  * @defgroup TLSHandshakeResults TLS handshake results.
@@ -108,11 +119,9 @@
  */
 typedef struct SSocketContext
 {
-    uint8_t ucInUse;                     /**< Tracks whether the socket is in use or not. */
+    uint8_t ucInUse;                     /**< Tracks whether the socket is in use or not. The xUcInUse mutex must be secured before modifying. */
     _i16 sSocketDescriptor;              /**< Socket descriptor as returned by the Simple Link. */
     uint32_t ulFlags;                    /**< Various properties of the socket (secured, non-blocking etc.). */
-    char * pcServerCertificate;          /**< Server certificate to be used. */
-    uint32_t ulServerCertificateLength;  /**< Length of the server certificate. */
     TickType_t xSendTimeoutTicks;        /**< Send timeout in ticks. Currently unused because Simple Link socket layer does not provide socket send timeout.
                                           *   Currently we just store the user supplied timeout in the socket context and do not use it. In future, we may
                                           *   use it to simulate send timeout in our layer. */
@@ -123,10 +132,16 @@ typedef struct SSocketContext
 /*-----------------------------------------------------------*/
 
 /**
- * @brief The global synchronization mutex to ensure that only
- * one operation is in progress at one time.
+ * @brief The global mutex to ensure that only one operation is accessing the
+ * SSocketContext.ucInUse flag at one time.
  */
-static SemaphoreHandle_t xSyncMutex = NULL;
+static SemaphoreHandle_t xUcInUse = NULL;
+
+/**
+ * @brief Controls global access to the sl_NetAppDnsGetHostByName, which
+ * should only be called by one thread at a time.
+ */
+static SemaphoreHandle_t xGetHostByName = NULL;
 
 /**
  * @brief Maximum time in ticks to wait for obtaining a semaphore.
@@ -174,8 +189,10 @@ static uint32_t prvGetSocketForDescriptor( _i16 sSocketDescriptor );
  *
  * @param[in] ulSocketNumber Index of the socket in the xSockets
  * array to be marked as free.
+ *
+ * @return pdTRUE if socket was successfully returned, pdFALSE otherwise.
  */
-static void prvReturnSocket( uint32_t ulSocketNumber );
+static BaseType_t prvReturnSocket( uint32_t ulSocketNumber );
 
 /**
  * @brief Checks whether or not the provided socket number is valid.
@@ -190,27 +207,7 @@ static void prvReturnSocket( uint32_t ulSocketNumber );
  */
 static BaseType_t prvIsValidSocket( uint32_t ulSocketNumber );
 
-/**
- * @brief Internal thread UNSAFE implementation of the SOCKETS_SetSockOpt
- * API.
- *
- * @warn This function assumes that the caller holds the
- * global synchronization mutex.
- */
-static int32_t prvSetSockOpt( Socket_t xSocket,
-                              int32_t lLevel,
-                              int32_t lOptionName,
-                              const void * pvOptionValue,
-                              size_t xOptionLength );
 
-/**
- * @brief Internal thread UNSAFE implementation of the SOCKETS_Close
- * API.
- *
- * @warn This function assumes that the caller holds the
- * global synchronization mutex.
- */
-static int32_t prvClose( Socket_t xSocket );
 
 /**
  * @brief Configures the required security settings for the TI socket corresponding
@@ -218,9 +215,6 @@ static int32_t prvClose( Socket_t xSocket );
  *
  * It sets the security protocols, root CA, client certificate and keys
  * and ALPN list on the corresponding TI socket.
- *
- * @warn This function assumes that the caller holds the global synchronization
- * semaphore.
  *
  * @param[in] pxSocketContext The given socket context for which to configure the
  * security settings.
@@ -231,9 +225,6 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext );
 
 /**
  * @brief Write the given certificate to the file system.
- *
- * @warn This function assumes that the caller holds the global synchronization
- * semaphore.
  *
  * @param[in] pcDeviceFileName The filename to write the certificate to.
  * @param[in] pcCertificate The certificate to write.
@@ -251,34 +242,30 @@ static uint32_t prvGetFreeSocket( void )
 {
     uint32_t ulSocketNumber;
 
-    /* Iterate over xSockets array to see if any free socket
-     * is available. */
-    for( ulSocketNumber = 0 ; ulSocketNumber < ( uint32_t ) securesocketsMAX_NUM_SOCKETS ; ulSocketNumber++ )
+    /* Obtain the socketInUse mutex. */
+    if( xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime ) == pdTRUE )
     {
-        /* Protect the access to ucInUse. Even though all the
-         * API calls are protected by the global synchronization
-         * semaphore, this is still necessary because
-         * prvGetSocketForDescriptor also accesses ucInUse and it
-         * gets called from the SimpleLink socket event callback
-         * handler and this handler does not explicitly obtains the
-         * global synchronization mutex. The API call waiting for
-         * a signal from the callback might have timed out by then
-         * and returned the global synchronization mutex back. */
-        taskENTER_CRITICAL();
-
-        if( xSockets[ ulSocketNumber ].ucInUse == 0U )
+        /* Iterate over xSockets array to see if any free socket is available. */
+        for( ulSocketNumber = 0; ulSocketNumber < ( uint32_t ) securesocketsMAX_NUM_SOCKETS; ulSocketNumber++ )
         {
-            /* Mark the socket as "in-use". */
-            xSockets[ ulSocketNumber ].ucInUse = 1;
-            taskEXIT_CRITICAL();
+            if( xSockets[ ulSocketNumber ].ucInUse == 0U )
+            {
+                /* Mark the socket as "in-use". */
+                xSockets[ ulSocketNumber ].ucInUse = 1;
 
-            /* We have found a free socket, so stop. */
-            break;
+                /* We have found a free socket, so stop. */
+                break;
+            }
         }
-        else
-        {
-            taskEXIT_CRITICAL();
-        }
+
+        /* Give back the socketInUse mutex. */
+        ( void ) xSemaphoreGive( xUcInUse );
+    }
+    else
+    {
+        /* Failed to obtain socketInUse mutex.
+         * Set socket number to an invalid value. */
+        ulSocketNumber = securesocketsMAX_NUM_SOCKETS;
     }
 
     /* Did we find a free socket? */
@@ -297,33 +284,26 @@ static uint32_t prvGetSocketForDescriptor( _i16 sSocketDescriptor )
 {
     uint32_t ulSocketNumber;
 
-    /* Iterate over xSockets array to see if any socket context which
-     * is "in-use", matches the given socket descriptor. */
-    for( ulSocketNumber = 0 ; ulSocketNumber < ( uint32_t ) securesocketsMAX_NUM_SOCKETS ; ulSocketNumber++ )
+    /* Obtain the socketInUse mutex. */
+    if( xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime ) == pdTRUE )
     {
-        /* Protect the access to ucInUse. Even though all the
-         * API calls are protected by the global synchronization
-         * semaphore, this is still necessary because
-         * prvGetSocketForDescriptor also accesses ucInUse and it
-         * gets called from the SimpleLink socket event callback
-         * handler and this handler does not explicitly obtains the
-         * global synchronization mutex. The API call waiting for
-         * a signal from the callback might have timed out by then
-         * and returned the global synchronization mutex back. */
-        taskENTER_CRITICAL();
-
-        if( ( xSockets[ ulSocketNumber ].ucInUse == 1U ) &&
-            ( xSockets[ ulSocketNumber ].sSocketDescriptor == sSocketDescriptor ) )
+        /* Iterate over xSockets array to see if any socket context which
+         * is "in-use", matches the given socket descriptor. */
+        for( ulSocketNumber = 0; ulSocketNumber < ( uint32_t ) securesocketsMAX_NUM_SOCKETS; ulSocketNumber++ )
         {
-            taskEXIT_CRITICAL();
+            if( ( xSockets[ ulSocketNumber ].ucInUse == 1U ) &&
+                ( xSockets[ ulSocketNumber ].sSocketDescriptor == sSocketDescriptor ) )
+            {
+                break;
+            }
+        }
 
-            /* We have found the socket, so stop. */
-            break;
-        }
-        else
-        {
-            taskEXIT_CRITICAL();
-        }
+        /* Give back the socketInUse mutex. */
+        ( void ) xSemaphoreGive( xUcInUse );
+    }
+    else
+    {
+        ulSocketNumber = securesocketsMAX_NUM_SOCKETS;
     }
 
     /* Did we find the socket we were looking for? */
@@ -338,23 +318,23 @@ static uint32_t prvGetSocketForDescriptor( _i16 sSocketDescriptor )
 }
 /*-----------------------------------------------------------*/
 
-static void prvReturnSocket( uint32_t ulSocketNumber )
+static BaseType_t prvReturnSocket( uint32_t ulSocketNumber )
 {
-    /* Protect the access to ucInUse. Even though all the
-     * API calls are protected by the global synchronization
-     * semaphore, this is still necessary because
-     * prvGetSocketForDescriptor also accesses ucInUse and it
-     * gets called from the SimpleLink socket event callback
-     * handler and this handler does not explicitly obtains the
-     * global synchronization mutex. The API call waiting for
-     * a signal from the callback might have timed out by then
-     * and returned the global synchronization mutex back. */
-    taskENTER_CRITICAL();
+    BaseType_t xResult = pdFAIL;
+
+    /* Obtain the socketInUse mutex. */
+    if( xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime ) == pdTRUE )
     {
         /* Mark the socket as free. */
         xSockets[ ulSocketNumber ].ucInUse = 0;
+
+        xResult = pdPASS;
+
+        /* Give back the socketInUse mutex. */
+        ( void ) xSemaphoreGive( xUcInUse );
     }
-    taskEXIT_CRITICAL();
+
+    return xResult;
 }
 /*-----------------------------------------------------------*/
 
@@ -362,20 +342,12 @@ static BaseType_t prvIsValidSocket( uint32_t ulSocketNumber )
 {
     BaseType_t xValid = pdFALSE;
 
-    /* Check that the provided socket number is within the valid
-     * index range. */
-    if( ulSocketNumber < ( uint32_t ) securesocketsMAX_NUM_SOCKETS )
+    /* Obtain the socketInUse mutex. */
+    if( xSemaphoreTake( xUcInUse, xMaxSemaphoreBlockTime ) == pdTRUE )
     {
-        /* Protect the access to ucInUse. Even though all the
-         * API calls are protected by the global synchronization
-         * semaphore, this is still necessary because
-         * prvGetSocketForDescriptor also accesses ucInUse and it
-         * gets called from the SimpleLink socket event callback
-         * handler and this handler does not explicitly obtains the
-         * global synchronization mutex. The API call waiting for
-         * a signal from the callback might have timed out by then
-         * and returned the global synchronization mutex back. */
-        taskENTER_CRITICAL();
+        /* Check that the provided socket number is within the valid
+         * index range. */
+        if( ulSocketNumber < ( uint32_t ) securesocketsMAX_NUM_SOCKETS )
         {
             /* Check that this socket is in use. */
             if( xSockets[ ulSocketNumber ].ucInUse == 1U )
@@ -384,18 +356,686 @@ static BaseType_t prvIsValidSocket( uint32_t ulSocketNumber )
                 xValid = pdTRUE;
             }
         }
-        taskEXIT_CRITICAL();
+
+        /* Give back the socketInUse mutex. */
+        ( void ) xSemaphoreGive( xUcInUse );
     }
 
     return xValid;
 }
+
 /*-----------------------------------------------------------*/
 
-static int32_t prvSetSockOpt( Socket_t xSocket,
-                              int32_t lLevel,
-                              int32_t lOptionName,
-                              const void * pvOptionValue,
-                              size_t xOptionLength )
+static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
+{
+    SlSockSecureMethod_t xSockSecureMethod;
+    SlSockSecureMask_t xSockSecureMask;
+    SlSockSecureALPN_t xSockSecureAlpn;
+    _i16 sTIRetCode;
+    int32_t lRetCode = SOCKETS_ERROR_NONE;
+    uint32_t ulDummyOptVal = 0;
+
+    /* Select the correct TLS method. */
+    xSockSecureMethod.SecureMethod = SL_SO_SEC_METHOD_TLSV1_2;
+    sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                SL_SOL_SOCKET,
+                                SL_SO_SECMETHOD,
+                                &( xSockSecureMethod ),
+                                ( SlSocklen_t ) sizeof( xSockSecureMethod ) );
+
+    if( sTIRetCode < 0 )
+    {
+        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+        configPRINTF( ( "ERROR: %d Failed to select TLS method.\r\n", sTIRetCode ) );
+        lRetCode = SOCKETS_SOCKET_ERROR;
+    }
+
+    /* Select the security protocols. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        xSockSecureMask.SecureMask = SL_SEC_MASK_TLS_RSA_WITH_AES_128_GCM_SHA256; /*lint !e9027 constants defined as shifted int instead of shifted uint in TI file.
+                                                                                   * MISRA does not permit << or | on signed integers. This can be waived since values
+                                                                                   * are used as a mask, not for their numerical value. */
+        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                    SL_SOL_SOCKET,
+                                    SL_SO_SECURE_MASK,
+                                    &( xSockSecureMask ),
+                                    ( SlSocklen_t ) sizeof( xSockSecureMask ) );
+
+        if( sTIRetCode < 0 )
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Failed to set cipher suites.\r\n", sTIRetCode ) );
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+    }
+
+    /* Disable the root certificate catalog. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                    SL_SOL_SOCKET,
+                                    SL_SO_SECURE_DISABLE_CERTIFICATE_STORE,
+                                    &( ulDummyOptVal ),
+                                    ( SlSocklen_t ) sizeof( ulDummyOptVal ) );
+
+        if( sTIRetCode < 0 )
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Failed to disable root certificate catalog.\r\n", sTIRetCode ) );
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+    }
+
+    /* Set the root certificate if a custom server cert was not already designated. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        if( 0 == ( pxSocketContext->ulFlags & securesocketsSOCKET_TRUSTED_SERVER_CERT_FLAG ) )
+        {
+            sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                        SL_SOL_SOCKET,
+                                        SL_SO_SECURE_FILES_CA_FILE_NAME,
+                                        securesocketsSECURE_FILE_NAME_ROOTCA,
+                                        ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_ROOTCA ) );
+
+            if( sTIRetCode < 0 )
+            {
+                /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                configPRINTF( ( "ERROR: %d Failed to set the root certificate.\r\n", sTIRetCode ) );
+                lRetCode = SOCKETS_SOCKET_ERROR;
+            }
+        }
+    }
+
+    /* Set the client certificate. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                    SL_SOL_SOCKET,
+                                    SL_SO_SECURE_FILES_CERTIFICATE_FILE_NAME,
+                                    securesocketsSECURE_FILE_NAME_CLIENTCERT,
+                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_CLIENTCERT ) );
+
+        if( sTIRetCode < 0 )
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Failed to set the client certificate.\r\n", sTIRetCode ) );
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+    }
+
+    /* Set the private keys. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                    SL_SOL_SOCKET,
+                                    SL_SO_SECURE_FILES_PRIVATE_KEY_FILE_NAME,
+                                    securesocketsSECURE_FILE_NAME_PRIVATEKEY,
+                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_PRIVATEKEY ) );
+
+        if( sTIRetCode < 0 )
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Failed to set the private keys.\r\n", sTIRetCode ) );
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+    }
+
+    /* Set the Application Layer Protocol Negotiation (ALPN) list. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        xSockSecureAlpn.SecureALPN = SL_SECURE_ALPN_FULL_LIST; /*lint !e9027 shift operator used in define in TI file.
+                                                                * Can be ignored since number used as mask and sign does not
+                                                                * affect outcome. */
+        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                    SL_SOL_SOCKET,
+                                    SL_SO_SECURE_ALPN,
+                                    &( xSockSecureAlpn ),
+                                    ( SlSocklen_t ) sizeof( SlSockSecureALPN_t ) );
+
+        if( sTIRetCode < 0 )
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Failed to set the ALPN list.\r\n", sTIRetCode ) );
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+static int32_t prvWriteCertificate( const char * pcDeviceFileName,
+                                    const char * pcCertificate,
+                                    uint32_t ulCertificateSize )
+{
+    _i32 lFileHandle, lTIRetCode;
+    const uint16_t usMaxSize = 3000;
+    int32_t lRetCode = SOCKETS_ERROR_NONE;
+    unsigned long ulMasterToken = 0;
+
+    /* Open the file to which to write the certificate. */
+    lFileHandle = sl_FsOpen( ( const unsigned char * ) pcDeviceFileName,
+                             SL_FS_CREATE | SL_FS_CREATE_NOSIGNATURE
+                             | SL_FS_OVERWRITE | SL_FS_CREATE_MAX_SIZE( usMaxSize ), /*lint !e9029 !e9027  offending macros in a TI file. */
+                             &( ulMasterToken ) );
+
+    if( lFileHandle < 0 )
+    {
+        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+        configPRINTF( ( "ERROR: %d Failed to open file %s.\r\n", lFileHandle, pcDeviceFileName ) );
+        lRetCode = SOCKETS_SOCKET_ERROR;
+    }
+
+    /* Write the certificate to the file. */
+    if( lRetCode == SOCKETS_ERROR_NONE )
+    {
+        lTIRetCode = sl_FsWrite( lFileHandle,
+                                 0U,                                      /* Offset zero means write from the beginning. */
+                                 ( unsigned char * ) pcCertificate, /*lint !e605 cert bytes must be cast as unsigned for compliance with TI file. */
+                                 ulCertificateSize );
+
+        if( lTIRetCode < 0 )
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Failed to write certificate to file %s.\r\n", lTIRetCode, pcDeviceFileName ) );
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+
+        /* Close the file. */
+        ( void ) sl_FsClose( lFileHandle, NULL, NULL, 0 );
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+BaseType_t SOCKETS_Init( void )
+{
+    BaseType_t xResult = pdFAIL;
+
+    /* Create the global mutex which is used to ensure
+     * that only one socket is accessing the ucInUse bits in
+     * the socket array. */
+    xUcInUse = xSemaphoreCreateMutex();
+
+    if( xUcInUse != NULL )
+    {
+        xGetHostByName = xSemaphoreCreateMutex();
+
+        if( xGetHostByName != NULL )
+        {
+            /* Success. */
+            xResult = pdPASS;
+        }
+        else
+        {
+            configPRINTF( ( "ERROR: SOCKETS_Init - Failed to create the GetHostByName mutex. \r\n" ) );
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: SOCKETS_Init - Failed to create the SocketInUse mutex.\r\n" ) );
+        xResult = pdFAIL;
+    }
+
+    return xResult;
+}
+/*-----------------------------------------------------------*/
+
+Socket_t SOCKETS_Socket( int32_t lDomain,
+                         int32_t lType,
+                         int32_t lProtocol )
+{
+    Socket_t xCreatedSocket = SOCKETS_INVALID_SOCKET;
+    SSocketContextPtr_t pxSocketContext;
+    TickType_t xTimeoutTicks;
+    int32_t lRetCode = SOCKETS_ERROR_NONE;
+    uint32_t ulSocketNumber;
+
+    /* Ensure that only supported values are supplied. */
+    configASSERT( lDomain == SOCKETS_AF_INET );
+    configASSERT( lType == SOCKETS_SOCK_STREAM );
+    configASSERT( lProtocol == SOCKETS_IPPROTO_TCP );
+
+    /* Get a free socket from the free socket pool. */
+    ulSocketNumber = prvGetFreeSocket();
+
+    /* Check that we indeed got a free socket. */
+    if( ulSocketNumber != ( uint32_t ) SOCKETS_INVALID_SOCKET )
+    {
+        /* Socket to be returned to the user. */
+        xCreatedSocket = ( Socket_t ) ulSocketNumber;
+
+        /* Shortcut for easy access. */
+        pxSocketContext = &( xSockets[ ulSocketNumber ] );
+
+        /* Initialize socket context. */
+        pxSocketContext->ulFlags = 0;
+        pxSocketContext->xSSLSyncSemaphore = NULL;
+        pxSocketContext->xSSLHandshakeResult = 0;
+
+        /* Create the socket on the TI network processor. */
+        pxSocketContext->sSocketDescriptor = sl_Socket( SL_AF_INET, SL_SOCK_STREAM, 0 );
+
+        /* If the TI socket was created successfully, set the
+         * default timeouts. */
+        if( pxSocketContext->sSocketDescriptor >= 0 )
+        {
+            /* Set the receive timeout to the default value. */
+            xTimeoutTicks = ( TickType_t ) socketsconfigDEFAULT_RECV_TIMEOUT;
+
+            /* Since we already have the global synchronization mutex,
+             * call the internal version of SetSockOpt. */
+            lRetCode = SOCKETS_SetSockOpt( xCreatedSocket,
+                                           0, /* lLevel - Unused. */
+                                           SOCKETS_SO_RCVTIMEO,
+                                           &( xTimeoutTicks ),
+                                           sizeof( xTimeoutTicks ) );
+
+            if( lRetCode == SOCKETS_ERROR_NONE )
+            {
+                /* Set the send timeout to the default value. */
+                xTimeoutTicks = ( TickType_t ) socketsconfigDEFAULT_SEND_TIMEOUT;
+
+                /* Since we already have the global synchronization mutex,
+                 * call the internal version of SetSockOpt. */
+                lRetCode = SOCKETS_SetSockOpt( xCreatedSocket,
+                                               0, /* lLevel - Unused. */
+                                               SOCKETS_SO_SNDTIMEO,
+                                               &( xTimeoutTicks ),
+                                               sizeof( xTimeoutTicks ) );
+            }
+
+            /* If we failed to set send or receive timeout, close
+             * the socket. */
+            if( lRetCode != SOCKETS_ERROR_NONE )
+            {
+                ( void ) SOCKETS_Close( xCreatedSocket );
+
+                /* Inform the user about the failure by returning
+                 * invalid socket. */
+                xCreatedSocket = SOCKETS_INVALID_SOCKET;
+            }
+        }
+        else
+        {
+            /* If the TI Socket could not be created, return the socket
+             * context back to the free socket pool. */
+            configPRINTF( ( "ERROR: Failed to create TI socket.\r\n" ) );
+            prvReturnSocket( ulSocketNumber );
+
+            /* Inform the user about the failure by returning
+             * invalid socket. */
+            xCreatedSocket = SOCKETS_INVALID_SOCKET;
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: No more free sockets available.\r\n" ) );
+    }
+
+    return xCreatedSocket;
+}
+/*-----------------------------------------------------------*/
+
+int32_t SOCKETS_Connect( Socket_t xSocket,
+                         SocketsSockaddr_t * pxAddress,
+                         Socklen_t xAddressLength )
+{
+    SlSockAddrIn_t xAddress;
+    SSocketContextPtr_t pxSocketContext;
+    _i16 sTIRetCode;
+    int32_t lRetCode = SOCKETS_ERROR_NONE;
+    uint32_t ulDummyOptVal = 1;
+    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
+
+    /* Remove compiler warnings about unused parameters. */
+    ( void ) xAddressLength;
+
+    configASSERT( pxAddress != NULL );
+
+    /* Ensure that the socket is valid. */
+    if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
+    {
+        /* Shortcut for easy access. */
+        pxSocketContext = &( xSockets[ ulSocketNumber ] );
+
+        /* Check that the socket is not already connected. */
+        if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) != 0UL )
+        {
+            lRetCode = SOCKETS_SOCKET_ERROR;
+        }
+
+        /* If the socket is a secure socket, setup security for it. */
+        if( ( lRetCode == SOCKETS_ERROR_NONE ) &&
+            ( ( pxSocketContext->ulFlags & securesocketsSOCKET_SECURE_FLAG ) != 0UL ) )
+        {
+            lRetCode = prvSetupSecurity( pxSocketContext );
+        }
+
+        /* Connect. */
+        if( lRetCode == SOCKETS_ERROR_NONE )
+        {
+            /* Set up the address to connect to. */
+            xAddress.sin_family = SL_AF_INET;
+            xAddress.sin_port = pxAddress->usPort;
+            xAddress.sin_addr.s_addr = pxAddress->ulAddress;
+
+            /* Initiate connect. */
+            sTIRetCode = sl_Connect( pxSocketContext->sSocketDescriptor,
+                                     ( const SlSockAddr_t * ) &( xAddress ), /*lint !e9087 !e740 SlSockAddr_t behaves like a union of SlSockAddrIn_t.
+                                                                             * SlSockAddrIn_t is the appropriate interpretation of a IPv4 address. */
+                                     ( _i16 ) sizeof( SlSockAddrIn_t ) );
+
+            /* If connection is successful, mark the socket as connected. */
+            if( sTIRetCode == 0 )
+            {
+                pxSocketContext->ulFlags |= securesocketsSOCKET_IS_CONNECTED;
+            }
+            else
+            {
+                /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                configPRINTF( ( "ERROR: %d Socket failed to connect.\r\n", sTIRetCode ) );
+                lRetCode = SOCKETS_SOCKET_ERROR;
+            }
+
+            /* If connection is successful and the socket is a secure
+             * socket, start TLS. */
+            if( ( lRetCode == SOCKETS_ERROR_NONE ) && ( ( pxSocketContext->ulFlags & securesocketsSOCKET_SECURE_FLAG ) != 0UL ) )
+            {
+                /* Clear the TLS handshake result before starting the TLS handshake. */
+                pxSocketContext->xSSLHandshakeResult = securesocketsTLS_HANDSHAKE_INVALID;
+
+                /* Initiate the TLS handshake. */
+                sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor, /*lint !e613 pxSocketContext is checked for null at top. */
+                                            SL_SOL_SOCKET,
+                                            SL_SO_STARTTLS,
+                                            &( ulDummyOptVal ),
+                                            ( SlSocklen_t ) sizeof( ulDummyOptVal ) );
+
+                if( sTIRetCode >= 0 )
+                {
+                    /* When the TLS handshake completes, SimpleLinkSockEventHandler is called
+                     * to inform about the success or failure. Block the calling task here
+                     * and wait for the SimpleLinkSockEventHandler to unblock us. This semaphore
+                     * is given in the SimpleLinkSockEventHandler to unblock this task. */
+                    if( xSemaphoreTake( pxSocketContext->xSSLSyncSemaphore, portMAX_DELAY ) == pdTRUE )
+                    {
+                        /* Check whether or not the handshake was successful and inform the user. */
+                        if( pxSocketContext->xSSLHandshakeResult != securesocketsTLS_HANDSHAKE_SUCCESS )
+                        {
+                            lRetCode = SOCKETS_TLS_HANDSHAKE_ERROR;
+                        }
+                    }
+                    else
+                    {
+                        /* We should never get here. */
+                        lRetCode = SOCKETS_TLS_HANDSHAKE_ERROR;
+                    }
+                }
+                else
+                {
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                    configPRINTF( ( "ERROR: %d Failed to start TLS Handshake.\r\n", sTIRetCode ) );
+                    lRetCode = SOCKETS_TLS_INIT_ERROR;
+                }
+            }
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: Invalid socket number in SOCKETS_Connect.\r\n" ) );
+        lRetCode = SOCKETS_EINVAL;
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+int32_t SOCKETS_Recv( Socket_t xSocket,
+                      void * pvBuffer,
+                      size_t xBufferLength,
+                      uint32_t ulFlags )
+{
+    SSocketContextPtr_t pxSocketContext;
+    _i16 sTIRetCode;
+    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
+    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
+
+
+    /* Ensure that the socket is valid and the passed buffer is not NULL. */
+    if( ( prvIsValidSocket( ulSocketNumber ) == pdTRUE ) && ( pvBuffer != NULL ) )
+    {
+        /* Shortcut for easy access. */
+        pxSocketContext = &( xSockets[ ulSocketNumber ] );
+
+        /* Check that receive is allowed on the socket. */
+        if( ( pxSocketContext->ulFlags & securesocketsSOCKET_READ_CLOSED_FLAG ) == 0UL )
+        {
+            /* Receive on the TI socket. */
+            sTIRetCode = sl_Recv( pxSocketContext->sSocketDescriptor, pvBuffer, ( _i16 ) xBufferLength, ( _i16 ) 0 );
+
+            if( sTIRetCode < 0 )
+            {
+                if( sTIRetCode == SL_ERROR_BSD_EWOULDBLOCK )
+                {
+                    /* If sl_Recv returned SL_ERROR_BSD_EWOULDBLOCK, return SOCKETS_EWOULDBLOCK. */
+                    lRetCode = SOCKETS_EWOULDBLOCK;
+                }
+                else
+                {
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                    configPRINTF( ( "ERROR: %d Socket receive failed.\r\n", sTIRetCode ) );
+                    lRetCode = SOCKETS_SOCKET_ERROR;
+                }
+            }
+            else
+            {
+                /* In case of success, return the number of bytes
+                 * read to the user. */
+                lRetCode = sTIRetCode;
+            }
+        }
+        else
+        {
+            /* The socket has been closed for read. */
+            lRetCode = SOCKETS_ECLOSED;
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: Invalid Socket number or NULL pvBuffer in SOCKETS_Recv.\r\n" ) );
+        lRetCode = SOCKETS_EINVAL;
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+int32_t SOCKETS_Send( Socket_t xSocket,
+                      const void * pvBuffer,
+                      size_t xDataLength,
+                      uint32_t ulFlags )
+{
+    SSocketContextPtr_t pxSocketContext;
+    _i16 sTIRetCode;
+    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
+    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
+
+
+    /* Ensure that the socket is valid and the passed buffer is not NULL. */
+    if( ( prvIsValidSocket( ulSocketNumber ) == pdTRUE ) && ( pvBuffer != NULL ) )
+    {
+        /* Shortcut for easy access. */
+        pxSocketContext = &( xSockets[ ulSocketNumber ] );
+
+        /* Check that send is allowed on the socket. */
+        if( ( pxSocketContext->ulFlags & securesocketsSOCKET_WRITE_CLOSED_FLAG ) == 0UL )
+        {
+            /* Send on the TI socket. */
+            sTIRetCode = sl_Send( pxSocketContext->sSocketDescriptor, pvBuffer, ( _i16 ) xDataLength, ( _i16 ) 0 );
+
+            if( sTIRetCode < 0 )
+            {
+                if( sTIRetCode == SL_ERROR_BSD_EWOULDBLOCK )
+                {
+                    /* If sl_Recv returned SL_ERROR_BSD_EWOULDBLOCK, return SOCKETS_EWOULDBLOCK. */
+                    lRetCode = SOCKETS_EWOULDBLOCK;
+                }
+                else
+                {
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                    configPRINTF( ( "ERROR: %d Socket send failed.\r\n", sTIRetCode ) );
+                    /* For any other error, return SOCKETS_SOCKET_ERROR. */
+                    lRetCode = SOCKETS_SOCKET_ERROR;
+                }
+            }
+            else
+            {
+                /* In case of success, return the number of bytes
+                 * sent. */
+                lRetCode = sTIRetCode;
+            }
+        }
+        else
+        {
+            /* The socket has been closed for write. */
+            lRetCode = SOCKETS_ECLOSED;
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: Invalid Socket number or NULL pvBuffer in SOCKETS_Send.\r\n" ) );
+        lRetCode = SOCKETS_EINVAL;
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+int32_t SOCKETS_Shutdown( Socket_t xSocket,
+                          uint32_t ulHow )
+{
+    SSocketContextPtr_t pxSocketContext;
+    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
+    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
+
+
+    /* Ensure that the socket is valid. */
+    if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
+    {
+        /* Shortcut for easy access. */
+        pxSocketContext = &( xSockets[ ulSocketNumber ] );
+
+        switch( ulHow )
+        {
+            case SOCKETS_SHUT_RD:
+
+                /* Further receive calls on this socket should return error. */
+                pxSocketContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
+
+                /* Return success to the user. */
+                lRetCode = SOCKETS_ERROR_NONE;
+
+                break;
+
+            case SOCKETS_SHUT_WR:
+
+                /* Further send calls on this socket should return error. */
+                pxSocketContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
+
+                /* Return success to the user. */
+                lRetCode = SOCKETS_ERROR_NONE;
+
+                break;
+
+            case SOCKETS_SHUT_RDWR:
+
+                /* Further send or receive calls on this socket should return error. */
+                pxSocketContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
+                pxSocketContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
+
+                /* Return success to the user. */
+                lRetCode = SOCKETS_ERROR_NONE;
+
+                break;
+
+            default:
+
+                /* An invalid value was passed for ulHow. */
+                lRetCode = SOCKETS_EINVAL;
+
+                break;
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: Invalid socket number in SOCKETS_Shutdown.\r\n" ) );
+        lRetCode = SOCKETS_EINVAL;
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+int32_t SOCKETS_Close( Socket_t xSocket )
+{
+    SSocketContextPtr_t pxSocketContext;
+    _i16 sTIRetCode;
+    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
+    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
+
+    /* Ensure that the socket is valid. */
+    if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
+    {
+        /* Shortcut for easy access. */
+        pxSocketContext = &( xSockets[ ulSocketNumber ] );
+
+        /* Mark the socket as closed. */
+        pxSocketContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
+        pxSocketContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
+
+        /* Close the TI socket. */
+        sTIRetCode = sl_Close( pxSocketContext->sSocketDescriptor );
+
+        /* If TI socket was closed successfully, free up the internal
+         * resources. */
+        if( sTIRetCode >= 0 )
+        {
+            /* Free up TLS handshake synchronization semaphore. */
+            if( pxSocketContext->xSSLSyncSemaphore != NULL )
+            {
+                vSemaphoreDelete( pxSocketContext->xSSLSyncSemaphore );
+            }
+
+            /* Return the socket back to the free socket pool. */
+            prvReturnSocket( ulSocketNumber );
+
+            /* Success. */
+            lRetCode = SOCKETS_ERROR_NONE;
+        }
+        else
+        {
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+            configPRINTF( ( "ERROR: %d Socket close failed.\r\n", sTIRetCode ) );
+        }
+    }
+    else
+    {
+        configPRINTF( ( "ERROR: Invalid socket number in SOCKETS_Close.\r\n" ) );
+        lRetCode = SOCKETS_EINVAL;
+    }
+
+    return lRetCode;
+}
+/*-----------------------------------------------------------*/
+
+int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
+                            int32_t lLevel,
+                            int32_t lOptionName,
+                            const void * pvOptionValue,
+                            size_t xOptionLength )
 {
     SSocketContextPtr_t pxSocketContext;
     SlSockNonblocking_t xSockNonblocking;
@@ -418,71 +1058,103 @@ static int32_t prvSetSockOpt( Socket_t xSocket,
         {
             case SOCKETS_SO_SERVER_NAME_INDICATION:
 
-                /* Set Server Name Indication (SNI) on the TI socket. */
-                sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                            SL_SOL_SOCKET,
-                                            SL_SO_SECURE_DOMAIN_NAME_VERIFICATION,
-                                            pvOptionValue,
-                                            ( SlSocklen_t ) xOptionLength );
-
-                /* If the above sl_SetSockOpt succeeded, return success to the user. */
-                if( sTIRetCode >= 0 )
+                if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) == 0 )
                 {
-                    lRetCode = SOCKETS_ERROR_NONE;
+                    /* Set Server Name Indication (SNI) on the TI socket. */
+                    sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                                SL_SOL_SOCKET,
+                                                SL_SO_SECURE_DOMAIN_NAME_VERIFICATION,
+                                                pvOptionValue,
+                                                ( SlSocklen_t ) xOptionLength );
+
+                    /* If the above sl_SetSockOpt succeeded, return success to the user. */
+                    if( sTIRetCode >= 0 )
+                    {
+                        lRetCode = SOCKETS_ERROR_NONE;
+                    }
+                    else
+                    {
+                        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                        configPRINTF( ( "ERROR: %d SockOpt SNI failed.\r\n", sTIRetCode ) );
+                    }
+                }
+                else
+                {
+                    lRetCode = SOCKETS_SOCKET_ERROR;
+                    configPRINTF( ( "ERROR: SNI must be set before connection is established.\r\n" ) );
                 }
 
                 break;
 
             case SOCKETS_SO_TRUSTED_SERVER_CERTIFICATE:
 
-                /* Ensure that SOCKETS_SO_TRUSTED_SERVER_CERTIFICATE was not
-                 * called before on this socket. */
-                configASSERT( pxSocketContext->pcServerCertificate == NULL );
-
-                /* Non-NULL server certificate field indicates that the default trust
-                 * list should not be used. */
-                pxSocketContext->pcServerCertificate = ( char * ) pvPortMalloc( xOptionLength ); /*lint !e9079 portMalloc guarantees alignment of void pointer to boundary appropriate for char *. */
-
-                if( NULL == pxSocketContext->pcServerCertificate )
+                if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) == 0 )
                 {
-                    /* Out of heap space. */
-                    lRetCode = SOCKETS_ENOMEM;
+                    /* Write the certificate to the file system. */
+                    lRetCode = prvWriteCertificate( securesocketsSECURE_FILE_NAME_CUSTOMROOTCA,
+                                                    pvOptionValue,
+                                                    xOptionLength - 1U );
+
+                    /* If the certificate was successfully written to the
+                     * file system, use it for the socket. */
+                    if( lRetCode == SOCKETS_ERROR_NONE )
+                    {
+                        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                                    SL_SOL_SOCKET,
+                                                    SL_SO_SECURE_FILES_CA_FILE_NAME,
+                                                    securesocketsSECURE_FILE_NAME_CUSTOMROOTCA,
+                                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_CUSTOMROOTCA ) );
+
+                        if( sTIRetCode >= 0 )
+                        {
+                            /* Mark the socket as having a custom trusted root CA. */
+                            pxSocketContext->ulFlags |= securesocketsSOCKET_TRUSTED_SERVER_CERT_FLAG;
+                        }
+                        else
+                        {
+                            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                            configPRINTF( ( "ERROR: %d Failed to set the custom root certificate.\r\n", sTIRetCode ) );
+                            lRetCode = SOCKETS_SOCKET_ERROR;
+                        }
+                    }
                 }
                 else
                 {
-                    /* Copy the certificate. */
-                    memcpy( pxSocketContext->pcServerCertificate, pvOptionValue, xOptionLength );
-
-                    /* Store certificate length. */
-                    pxSocketContext->ulServerCertificateLength = xOptionLength;
-
-                    /* Success. */
-                    lRetCode = SOCKETS_ERROR_NONE;
+                    lRetCode = SOCKETS_SOCKET_ERROR;
+                    configPRINTF( ( "ERROR: Secure trusted cert must be set before connection is established.\r\n" ) );
                 }
 
                 break;
 
             case SOCKETS_SO_REQUIRE_TLS:
 
-                /* Create the semaphore required for synchronizing TLS handshake
-                 * results returned in the SimpleLink socket event handler callback. */
-                pxSocketContext->xSSLSyncSemaphore = xSemaphoreCreateBinary();
-
-                if( pxSocketContext->xSSLSyncSemaphore != NULL )
+                if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) == 0 )
                 {
-                    /* Store that we need to use TLS on this socket. */
-                    pxSocketContext->ulFlags |= securesocketsSOCKET_SECURE_FLAG;
+                    /* Create the semaphore required for synchronizing TLS handshake
+                     * results returned in the SimpleLink socket event handler callback. */
+                    pxSocketContext->xSSLSyncSemaphore = xSemaphoreCreateBinary();
 
-                    /* Success. */
-                    lRetCode = SOCKETS_ERROR_NONE;
+                    if( pxSocketContext->xSSLSyncSemaphore != NULL )
+                    {
+                        /* Store that we need to use TLS on this socket. */
+                        pxSocketContext->ulFlags |= securesocketsSOCKET_SECURE_FLAG;
+
+                        /* Success. */
+                        lRetCode = SOCKETS_ERROR_NONE;
+                    }
+                    else
+                    {
+                        /* Since we failed to create the TLS handshake synchronization
+                         * semaphore, there is no point of turning the TLS flag on,
+                         * as we will not be able to setup TLS connection. Let the user
+                         * know that we failed to enable TLS. */
+                        lRetCode = SOCKETS_SOCKET_ERROR;
+                    }
                 }
                 else
                 {
-                    /* Since we failed to create the TLS handshake synchronization
-                     * semaphore, there is no point of turning the TLS flag on,
-                     * as we will not be able to setup TLS connection. Let the user
-                     * know that we failed to enable TLS. */
                     lRetCode = SOCKETS_SOCKET_ERROR;
+                    configPRINTF( ( "ERROR: Require TLS must be set before connection is established.\r\n" ) );
                 }
 
                 break;
@@ -513,6 +1185,11 @@ static int32_t prvSetSockOpt( Socket_t xSocket,
                 {
                     lRetCode = SOCKETS_ERROR_NONE;
                 }
+                else
+                {
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                    configPRINTF( ( "ERROR: %d SockOpt RCVTIMEO failed.\r\n", sTIRetCode ) );
+                }
 
                 break;
 
@@ -535,19 +1212,32 @@ static int32_t prvSetSockOpt( Socket_t xSocket,
 
             case SOCKETS_SO_NONBLOCK:
 
-                xSockNonblocking.NonBlockingEnabled = 1;
-
-                /* Mark the TI socket as non-blocking. */
-                sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                            SL_SOL_SOCKET,
-                                            SL_SO_NONBLOCKING,
-                                            &( xSockNonblocking ),
-                                            ( SlSocklen_t ) sizeof( xSockNonblocking ) );
-
-                /* If the above sl_SetSockOpt succeeded, return success to the user. */
-                if( sTIRetCode >= 0 )
+                if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) != 0 )
                 {
-                    lRetCode = SOCKETS_ERROR_NONE;
+                    xSockNonblocking.NonBlockingEnabled = 1;
+
+                    /* Mark the TI socket as non-blocking. */
+                    sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
+                                                SL_SOL_SOCKET,
+                                                SL_SO_NONBLOCKING,
+                                                &( xSockNonblocking ),
+                                                ( SlSocklen_t ) sizeof( xSockNonblocking ) );
+
+                    /* If the above sl_SetSockOpt succeeded, return success to the user. */
+                    if( sTIRetCode >= 0 )
+                    {
+                        lRetCode = SOCKETS_ERROR_NONE;
+                    }
+                    else
+                    {
+                        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
+                        configPRINTF( ( "ERROR: %d SockOpt NONBLOCK failed.\r\n", sTIRetCode ) );
+                    }
+                }
+                else
+                {
+                    lRetCode = SOCKETS_SOCKET_ERROR;
+                    configPRINTF( ( "ERROR: NONBLOCKING socket option must be called after connect. Nonblocking connect is not supported.\r\n" ) );
                 }
 
                 break;
@@ -560,786 +1250,8 @@ static int32_t prvSetSockOpt( Socket_t xSocket,
     }
     else
     {
-        configPRINTF( ( "ERROR: Invalid Socket number.\r\n" ) );
+        configPRINTF( ( "ERROR: SOCKETS_Connect - Invalid Socket number.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-static int32_t prvClose( Socket_t xSocket )
-{
-    SSocketContextPtr_t pxSocketContext;
-    _i16 sTIRetCode;
-    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
-    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
-
-    /* Ensure that the socket is valid. */
-    if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
-    {
-        /* Shortcut for easy access. */
-        pxSocketContext = &( xSockets[ ulSocketNumber ] );
-
-        /* Mark the socket as closed. */
-        pxSocketContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
-        pxSocketContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
-
-        /* Close the TI socket. */
-        sTIRetCode = sl_Close( pxSocketContext->sSocketDescriptor );
-
-        /* If TI socket was closed successfully, free up the internal
-         * resources. */
-        if( sTIRetCode >= 0 )
-        {
-            /* Free the space allocated for pcServerCertificate. */
-            if( pxSocketContext->pcServerCertificate != NULL )
-            {
-                vPortFree( pxSocketContext->pcServerCertificate );
-            }
-
-            /* Free up TLS handshake synchronization semaphore. */
-            if( pxSocketContext->xSSLSyncSemaphore != NULL )
-            {
-                vSemaphoreDelete( pxSocketContext->xSSLSyncSemaphore );
-            }
-
-            /* Return the socket back to the free socket pool. */
-            prvReturnSocket( ulSocketNumber );
-
-            /* Success. */
-            lRetCode = SOCKETS_ERROR_NONE;
-        }
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: Invalid Socket number.\r\n" ) );
-        lRetCode = SOCKETS_EINVAL;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
-{
-    SlSockSecureMethod_t xSockSecureMethod;
-    SlSockSecureMask_t xSockSecureMask;
-    SlSockSecureALPN_t xSockSecureAlpn;
-    _i16 sTIRetCode;
-    int32_t lRetCode = SOCKETS_ERROR_NONE;
-    uint32_t ulDummyOptVal = 0;
-
-    /* Select the correct TLS method. */
-    xSockSecureMethod.SecureMethod = SL_SO_SEC_METHOD_TLSV1_2;
-    sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                SL_SOL_SOCKET,
-                                SL_SO_SECMETHOD,
-                                &( xSockSecureMethod ),
-                                ( SlSocklen_t ) sizeof( xSockSecureMethod ) );
-
-    if( sTIRetCode < 0 )
-    {
-        configPRINTF( ( "ERROR: Failed to select TLS method.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    /* Select the security protocols. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        xSockSecureMask.SecureMask = SL_SEC_MASK_TLS_RSA_WITH_AES_128_GCM_SHA256; /*lint !e9027 constants defined as shifted int instead of shifted uint in TI file.
-                                                                                   * MISRA does not permit << or | on signed integers. This can be waived since values
-                                                                                   * are used as a mask, not for their numerical value. */
-        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                    SL_SOL_SOCKET,
-                                    SL_SO_SECURE_MASK,
-                                    &( xSockSecureMask ),
-                                    ( SlSocklen_t ) sizeof( xSockSecureMask ) );
-
-        if( sTIRetCode < 0 )
-        {
-            configPRINTF( ( "ERROR: Failed to set ciphersuites.\r\n" ) );
-            lRetCode = SOCKETS_SOCKET_ERROR;
-        }
-    }
-
-    /* Disable the root certificate catalog. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                    SL_SOL_SOCKET,
-                                    SL_SO_SECURE_DISABLE_CERTIFICATE_STORE,
-                                    &( ulDummyOptVal ),
-                                    ( SlSocklen_t ) sizeof( ulDummyOptVal ) );
-
-        if( sTIRetCode < 0 )
-        {
-            configPRINTF( ( "ERROR: Failed to disable root certificate catalog.\r\n" ) );
-            lRetCode = SOCKETS_SOCKET_ERROR;
-        }
-    }
-
-    /* Set the root certificate. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        /* If no root certificate was supplied by the user,
-         * set the default one. */
-        if( pxSocketContext->pcServerCertificate == NULL )
-        {
-            sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                        SL_SOL_SOCKET,
-                                        SL_SO_SECURE_FILES_CA_FILE_NAME,
-                                        securesocketsSECURE_FILE_NAME_ROOTCA,
-                                        ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_ROOTCA ) );
-
-            if( sTIRetCode < 0 )
-            {
-                configPRINTF( ( "ERROR: Failed to set the root certificate.\r\n" ) );
-                lRetCode = SOCKETS_SOCKET_ERROR;
-            }
-        }
-        else
-        {
-            /* Otherwise set the user supplied root certificate. */
-
-            /* First write the certificate to the file system. */
-            lRetCode = prvWriteCertificate( securesocketsSECURE_FILE_NAME_CUSTOMROOTCA,
-                                            pxSocketContext->pcServerCertificate,
-                                            pxSocketContext->ulServerCertificateLength - 1U );
-
-            /* If the certificate was successfully written to the
-             * file system, set it on the socket. */
-            if( lRetCode == SOCKETS_ERROR_NONE )
-            {
-                sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                            SL_SOL_SOCKET,
-                                            SL_SO_SECURE_FILES_CA_FILE_NAME,
-                                            securesocketsSECURE_FILE_NAME_CUSTOMROOTCA,
-                                            ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_CUSTOMROOTCA ) );
-
-                if( sTIRetCode < 0 )
-                {
-                    configPRINTF( ( "ERROR: Failed to set the custom root certificate.\r\n" ) );
-                    lRetCode = SOCKETS_SOCKET_ERROR;
-                }
-            }
-        }
-    }
-
-    /* Set the client certificate. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                    SL_SOL_SOCKET,
-                                    SL_SO_SECURE_FILES_CERTIFICATE_FILE_NAME,
-                                    securesocketsSECURE_FILE_NAME_CLIENTCERT,
-                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_CLIENTCERT ) );
-
-        if( sTIRetCode < 0 )
-        {
-            configPRINTF( ( "ERROR: Failed to set the client certificate.\r\n" ) );
-            lRetCode = SOCKETS_SOCKET_ERROR;
-        }
-    }
-
-    /* Set the private keys. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                    SL_SOL_SOCKET,
-                                    SL_SO_SECURE_FILES_PRIVATE_KEY_FILE_NAME,
-                                    securesocketsSECURE_FILE_NAME_PRIVATEKEY,
-                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_PRIVATEKEY ) );
-
-        if( sTIRetCode < 0 )
-        {
-            configPRINTF( ( "ERROR: Failed to set the private keys.\r\n" ) );
-            lRetCode = SOCKETS_SOCKET_ERROR;
-        }
-    }
-
-    /* Set the Application Layer Protocol Negotiation (ALPN) list. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        xSockSecureAlpn.SecureALPN = SL_SECURE_ALPN_FULL_LIST; /*lint !e9027 shift operator used in define in TI file.
-                                                                * Can be ignored since number used as mask and sign does not
-                                                                * affect outcome. */
-        sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
-                                    SL_SOL_SOCKET,
-                                    SL_SO_SECURE_ALPN,
-                                    &( xSockSecureAlpn ),
-                                    ( SlSocklen_t ) sizeof( SlSockSecureALPN_t ) );
-
-        if( sTIRetCode < 0 )
-        {
-            configPRINTF( ( "ERROR: Failed to set the ALPN list.\r\n" ) );
-            lRetCode = SOCKETS_SOCKET_ERROR;
-        }
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-static int32_t prvWriteCertificate( const char * pcDeviceFileName,
-                                    const char * pcCertificate,
-                                    uint32_t ulCertificateSize )
-{
-    _i32 lFileHandle, lTIRetCode;
-    const uint16_t usMaxSize = 3000;
-    int32_t lRetCode = SOCKETS_ERROR_NONE;
-    unsigned long ulMasterToken = 0;
-
-    /* Open the file to which to write the certificate. */
-    lFileHandle = sl_FsOpen( ( const unsigned char * ) pcDeviceFileName,
-                             SL_FS_CREATE | SL_FS_CREATE_NOSIGNATURE
-                             | SL_FS_OVERWRITE | SL_FS_CREATE_MAX_SIZE( usMaxSize ), /*lint !e9029 !e9027  offending macros in a TI file. */
-                             &( ulMasterToken ) );
-
-    if( lFileHandle < 0 )
-    {
-        configPRINTF( ( "ERROR: Failed to open file %s.\r\n", pcDeviceFileName ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    /* Write the certificate to the file. */
-    if( lRetCode == SOCKETS_ERROR_NONE )
-    {
-        lTIRetCode = sl_FsWrite( lFileHandle,
-                                 0U,                                      /* Offset zero means write from the beginning. */
-                                 ( const unsigned char * ) pcCertificate, /*lint !e605 cert bytes must be cast as unsigned for compliance with TI file. */
-                                 ulCertificateSize );
-
-        if( lTIRetCode < 0 )
-        {
-            configPRINTF( ( "ERROR: Failed to write certificate to file %s.\r\n", pcDeviceFileName ) );
-            lRetCode = SOCKETS_SOCKET_ERROR;
-        }
-
-        /* Close the file. */
-        ( void ) sl_FsClose( lFileHandle, NULL, NULL, 0 );
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-BaseType_t SOCKETS_Init( void )
-{
-    BaseType_t xResult = pdFAIL;
-
-    /* Create the global synchronization mutex which is used to ensure
-     * that only one socket operation is in progress at one point of time. */
-    xSyncMutex = xSemaphoreCreateMutex();
-
-    if( xSyncMutex != NULL )
-    {
-        /* Initialize the xSockets array. */
-        memset( xSockets, 0, sizeof( xSockets ) );
-
-        /* Success. */
-        xResult = pdPASS;
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Init - Failed to create the global synchronization mutex.\r\n" ) );
-        xResult = pdFAIL;
-    }
-
-    return xResult;
-}
-/*-----------------------------------------------------------*/
-
-Socket_t SOCKETS_Socket( int32_t lDomain,
-                         int32_t lType,
-                         int32_t lProtocol )
-{
-    Socket_t xCreatedSocket = SOCKETS_INVALID_SOCKET;
-    SSocketContextPtr_t pxSocketContext;
-    TickType_t xTimeoutTicks;
-    int32_t lRetCode = SOCKETS_ERROR_NONE;
-    uint32_t ulSocketNumber;
-
-    /* Ensure that only supported values are supplied. */
-    configASSERT( lDomain == SOCKETS_AF_INET );
-    configASSERT( lType == SOCKETS_SOCK_STREAM );
-    configASSERT( lProtocol == SOCKETS_IPPROTO_TCP );
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Get a free socket from the free socket pool. */
-        ulSocketNumber = prvGetFreeSocket();
-
-        /* Check that we indeed got a free socket. */
-        if( ulSocketNumber != ( uint32_t ) SOCKETS_INVALID_SOCKET )
-        {
-            /* Socket to be returned to the user. */
-            xCreatedSocket = ( Socket_t ) ulSocketNumber;
-
-            /* Shortcut for easy access. */
-            pxSocketContext = &( xSockets[ ulSocketNumber ] );
-
-            /* Initialize socket context. */
-            pxSocketContext->ulFlags = 0;
-            pxSocketContext->xSSLSyncSemaphore = NULL;
-            pxSocketContext->pcServerCertificate = NULL;
-            pxSocketContext->ulServerCertificateLength = 0;
-            pxSocketContext->xSSLHandshakeResult = 0;
-
-            /* Create the socket on the TI network processor. */
-            pxSocketContext->sSocketDescriptor = sl_Socket( SL_AF_INET, SL_SOCK_STREAM, 0 );
-
-            /* If the TI socket was created successfully, set the
-             * default timeouts. */
-            if( pxSocketContext->sSocketDescriptor >= 0 )
-            {
-                /* Set the receive timeout to the default value. */
-                xTimeoutTicks = ( TickType_t ) socketsconfigDEFAULT_RECV_TIMEOUT;
-
-                /* Since we already have the global synchronization mutex,
-                 * call the internal version of SetSockOpt. */
-                lRetCode = prvSetSockOpt( xCreatedSocket,
-                                          0, /* lLevel - Unused. */
-                                          SOCKETS_SO_RCVTIMEO,
-                                          &( xTimeoutTicks ),
-                                          sizeof( xTimeoutTicks ) );
-
-                if( lRetCode == SOCKETS_ERROR_NONE )
-                {
-                    /* Set the send timeout to the default value. */
-                    xTimeoutTicks = ( TickType_t ) socketsconfigDEFAULT_SEND_TIMEOUT;
-
-                    /* Since we already have the global synchronization mutex,
-                     * call the internal version of SetSockOpt. */
-                    lRetCode = prvSetSockOpt( xCreatedSocket,
-                                              0, /* lLevel - Unused. */
-                                              SOCKETS_SO_SNDTIMEO,
-                                              &( xTimeoutTicks ),
-                                              sizeof( xTimeoutTicks ) );
-                }
-
-                /* If we failed to set send or receive timeout, close
-                 * the socket. */
-                if( lRetCode != SOCKETS_ERROR_NONE )
-                {
-                    /* Since we already have the global synchronization mutex, call
-                     * the internal version of close. Note that the following call will
-                     * return the socket back to the free socket pool. */
-                    ( void ) prvClose( xCreatedSocket );
-
-                    /* Inform the user about the failure by returning
-                     * invalid socket. */
-                    xCreatedSocket = SOCKETS_INVALID_SOCKET;
-                }
-            }
-            else
-            {
-                /* If the TI Socket could not be created, return the socket
-                 * context back to the free socket pool. */
-                configPRINTF( ( "ERROR: Failed to create TI socket.\r\n" ) );
-                prvReturnSocket( ulSocketNumber );
-
-                /* Inform the user about the failure by returning
-                 * invalid socket. */
-                xCreatedSocket = SOCKETS_INVALID_SOCKET;
-            }
-        }
-        else
-        {
-            configPRINTF( ( "ERROR: No more free sockets available.\r\n" ) );
-        }
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Socket - Couldn't take the global synchronization mutex.\r\n" ) );
-    }
-
-    return xCreatedSocket;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Connect( Socket_t xSocket,
-                         SocketsSockaddr_t * pxAddress,
-                         Socklen_t xAddressLength )
-{
-    SlSockAddrIn_t xAddress;
-    SSocketContextPtr_t pxSocketContext;
-    _i16 sTIRetCode;
-    int32_t lRetCode = SOCKETS_ERROR_NONE;
-    uint32_t ulDummyOptVal = 1;
-    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
-
-    /* Remove compiler warnings about unused parameters. */
-    ( void ) xAddressLength;
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Ensure that the socket is valid. */
-        if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
-        {
-            /* Shortcut for easy access. */
-            pxSocketContext = &( xSockets[ ulSocketNumber ] );
-
-            /* If the socket is a secure socket, setup security for it. */
-            if( ( pxSocketContext->ulFlags & securesocketsSOCKET_SECURE_FLAG ) != 0UL )
-            {
-                lRetCode = prvSetupSecurity( pxSocketContext );
-            }
-
-            /* Connect. */
-            if( lRetCode == SOCKETS_ERROR_NONE )
-            {
-                /* Set up the address to connect to. */
-                xAddress.sin_family = SL_AF_INET;
-                xAddress.sin_port = pxAddress->usPort;
-                xAddress.sin_addr.s_addr = pxAddress->ulAddress;
-
-                /* Initiate connect. */
-                sTIRetCode = sl_Connect( pxSocketContext->sSocketDescriptor,
-                                         ( const SlSockAddr_t * ) &( xAddress ), /*lint !e9087 !e740 SlSockAddr_t behaves like a union of SlSockAddrIn_t.
-                                                                                 * SlSockAddrIn_t is the appropriate interpretation of a IPv4 address. */
-                                         ( _i16 ) sizeof( SlSockAddrIn_t ) );
-
-                if( sTIRetCode < 0 )
-                {
-                    configPRINTF( ( "ERROR: Socket failed to connect.\r\n" ) );
-                    lRetCode = SOCKETS_SOCKET_ERROR;
-                }
-
-                /* If connection is successful and the socket is a secure
-                 * socket, start TLS. */
-                if( ( lRetCode == SOCKETS_ERROR_NONE ) && ( ( pxSocketContext->ulFlags & securesocketsSOCKET_SECURE_FLAG ) != 0UL ) )
-                {
-                    /* Clear the TLS handshake result before starting the TLS handshake. */
-                    pxSocketContext->xSSLHandshakeResult = securesocketsTLS_HANDSHAKE_INVALID;
-
-                    /* Initiate the TLS handshake. */
-                    sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor, /*lint !e613 pxSocketContext is checked for null at top. */
-                                                SL_SOL_SOCKET,
-                                                SL_SO_STARTTLS,
-                                                &( ulDummyOptVal ),
-                                                ( SlSocklen_t ) sizeof( ulDummyOptVal ) );
-
-                    if( sTIRetCode >= 0 )
-                    {
-                        /* When the TLS handshake completes, SimpleLinkSockEventHandler is called
-                         * to inform about the success or failure. Block the calling task here
-                         * and wait for the SimpleLinkSockEventHandler to unblock us. This semaphore
-                         * is given in the SimpleLinkSockEventHandler to unblock this task. */
-                        if( xSemaphoreTake( pxSocketContext->xSSLSyncSemaphore, xMaxSemaphoreBlockTime ) == pdTRUE )
-                        {
-                            /* Check whether or not the handshake was successful and inform the user. */
-                            if( pxSocketContext->xSSLHandshakeResult != securesocketsTLS_HANDSHAKE_SUCCESS )
-                            {
-                                lRetCode = SOCKETS_TLS_HANDSHAKE_ERROR;
-                            }
-                        }
-                        else
-                        {
-                            /* If we timed out while waiting for the SSL handshake semaphore,
-                             * the SimpleLinkSockEventHandler may get called at a later point
-                             * and give the semaphore. As a result of which the next attempt
-                             * to take semaphore will pass immediately which means that the
-                             * next attempt to start TLS handshake will fail to wait for the
-                             * result from the SimpleLinkSockEventHandler. It is therefore
-                             * strongly recommended to close this socket. */
-                            lRetCode = SOCKETS_TLS_HANDSHAKE_ERROR;
-                        }
-                    }
-                    else
-                    {
-                        configPRINTF( ( "ERROR: Failed to start TLS Handshake.\r\n" ) );
-                        lRetCode = SOCKETS_TLS_INIT_ERROR;
-                    }
-                }
-            }
-        }
-        else
-        {
-            configPRINTF( ( "ERROR: Invalid Socket number.\r\n" ) );
-            lRetCode = SOCKETS_EINVAL;
-        }
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Connect - Couldn't take the global synchronization mutex.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Recv( Socket_t xSocket,
-                      void * pvBuffer,
-                      size_t xBufferLength,
-                      uint32_t ulFlags )
-{
-    SSocketContextPtr_t pxSocketContext;
-    _i16 sTIRetCode;
-    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
-    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Ensure that the socket is valid and the passed buffer is not NULL. */
-        if( ( prvIsValidSocket( ulSocketNumber ) == pdTRUE ) && ( pvBuffer != NULL ) )
-        {
-            /* Shortcut for easy access. */
-            pxSocketContext = &( xSockets[ ulSocketNumber ] );
-
-            /* Check that receive is allowed on the socket. */
-            if( ( pxSocketContext->ulFlags & securesocketsSOCKET_READ_CLOSED_FLAG ) == 0UL )
-            {
-                /* Receive on the TI socket. */
-                sTIRetCode = sl_Recv( pxSocketContext->sSocketDescriptor, pvBuffer, ( _i16 ) xBufferLength, ( _i16 ) 0 );
-
-                if( sTIRetCode < 0 )
-                {
-                    if( sTIRetCode == SL_ERROR_BSD_EWOULDBLOCK )
-                    {
-                        /* If sl_Recv returned SL_ERROR_BSD_EWOULDBLOCK, return SOCKETS_EWOULDBLOCK. */
-                        lRetCode = SOCKETS_EWOULDBLOCK;
-                    }
-                    else
-                    {
-                        /* For any other error, return SOCKETS_SOCKET_ERROR. */
-                        lRetCode = SOCKETS_SOCKET_ERROR;
-                    }
-                }
-                else
-                {
-                    /* In case of success, return the number of bytes
-                     * read to the user. */
-                    lRetCode = sTIRetCode;
-                }
-            }
-            else
-            {
-                /* The socket has been closed for read. */
-                lRetCode = SOCKETS_ECLOSED;
-            }
-        }
-        else
-        {
-            configPRINTF( ( "ERROR: Invalid Socket number or NULL pvBuffer.\r\n" ) );
-            lRetCode = SOCKETS_EINVAL;
-        }
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Recv - Couldn't take the global synchronization mutex.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Send( Socket_t xSocket,
-                      const void * pvBuffer,
-                      size_t xDataLength,
-                      uint32_t ulFlags )
-{
-    SSocketContextPtr_t pxSocketContext;
-    _i16 sTIRetCode;
-    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
-    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Ensure that the socket is valid and the passed buffer is not NULL. */
-        if( ( prvIsValidSocket( ulSocketNumber ) == pdTRUE ) && ( pvBuffer != NULL ) )
-        {
-            /* Shortcut for easy access. */
-            pxSocketContext = &( xSockets[ ulSocketNumber ] );
-
-            /* Check that send is allowed on the socket. */
-            if( ( pxSocketContext->ulFlags & securesocketsSOCKET_WRITE_CLOSED_FLAG ) == 0UL )
-            {
-                /* Send on the TI socket. */
-                sTIRetCode = sl_Send( pxSocketContext->sSocketDescriptor, pvBuffer, ( _i16 ) xDataLength, ( _i16 ) 0 );
-
-                if( sTIRetCode < 0 )
-                {
-                    if( sTIRetCode == SL_ERROR_BSD_EWOULDBLOCK )
-                    {
-                        /* If sl_Recv returned SL_ERROR_BSD_EWOULDBLOCK, return SOCKETS_EWOULDBLOCK. */
-                        lRetCode = SOCKETS_EWOULDBLOCK;
-                    }
-                    else
-                    {
-                        /* For any other error, return SOCKETS_SOCKET_ERROR. */
-                        lRetCode = SOCKETS_SOCKET_ERROR;
-                    }
-                }
-                else
-                {
-                    /* In case of success, return the number of bytes
-                     * sent. */
-                    lRetCode = sTIRetCode;
-                }
-            }
-            else
-            {
-                /* The socket has been closed for write. */
-                lRetCode = SOCKETS_ECLOSED;
-            }
-        }
-        else
-        {
-            configPRINTF( ( "ERROR: Invalid Socket number or NULL pvBuffer.\r\n" ) );
-            lRetCode = SOCKETS_EINVAL;
-        }
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Send - Couldn't take the global synchronization mutex.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Shutdown( Socket_t xSocket,
-                          uint32_t ulHow )
-{
-    SSocketContextPtr_t pxSocketContext;
-    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
-    uint32_t ulSocketNumber = ( uint32_t ) xSocket;
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Ensure that the socket is valid. */
-        if( prvIsValidSocket( ulSocketNumber ) == pdTRUE )
-        {
-            /* Shortcut for easy access. */
-            pxSocketContext = &( xSockets[ ulSocketNumber ] );
-
-            switch( ulHow )
-            {
-                case SOCKETS_SHUT_RD:
-
-                    /* Further receive calls on this socket should return error. */
-                    pxSocketContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
-
-                    /* Return success to the user. */
-                    lRetCode = SOCKETS_ERROR_NONE;
-
-                    break;
-
-                case SOCKETS_SHUT_WR:
-
-                    /* Further send calls on this socket should return error. */
-                    pxSocketContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
-
-                    /* Return success to the user. */
-                    lRetCode = SOCKETS_ERROR_NONE;
-
-                    break;
-
-                case SOCKETS_SHUT_RDWR:
-
-                    /* Further send or receive calls on this socket should return error. */
-                    pxSocketContext->ulFlags |= securesocketsSOCKET_READ_CLOSED_FLAG;
-                    pxSocketContext->ulFlags |= securesocketsSOCKET_WRITE_CLOSED_FLAG;
-
-                    /* Return success to the user. */
-                    lRetCode = SOCKETS_ERROR_NONE;
-
-                    break;
-
-                default:
-
-                    /* An invalid value was passed for ulHow. */
-                    lRetCode = SOCKETS_EINVAL;
-
-                    break;
-            }
-        }
-        else
-        {
-            configPRINTF( ( "ERROR: Invalid Socket number.\r\n" ) );
-            lRetCode = SOCKETS_EINVAL;
-        }
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Shutdown - Couldn't take the global synchronization mutex.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Close( Socket_t xSocket )
-{
-    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Invoke the internal version of Close which is not
-         * thread safe. */
-        lRetCode = prvClose( xSocket );
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_Close - Couldn't take the global synchronization mutex.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
-    }
-
-    return lRetCode;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
-                            int32_t lLevel,
-                            int32_t lOptionName,
-                            const void * pvOptionValue,
-                            size_t xOptionLength )
-{
-    int32_t lRetCode = SOCKETS_SOCKET_ERROR;
-
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
-    {
-        /* Invoke the internal version of SetSockOpt which is not
-         * thread safe. */
-        lRetCode = prvSetSockOpt( xSocket, lLevel, lOptionName, pvOptionValue, xOptionLength );
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
-    }
-    else
-    {
-        configPRINTF( ( "ERROR: SOCKETS_SetSockOpt - Couldn't take the global synchronization mutex.\r\n" ) );
-        lRetCode = SOCKETS_SOCKET_ERROR;
     }
 
     return lRetCode;
@@ -1348,36 +1260,28 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
 
 uint32_t SOCKETS_GetHostByName( const char * pcHostName )
 {
-    _i16 sTIRetCode;
+    _i16 sTIRetCode = -1;
     _u32 ulResolvedIPAddress;
     uint32_t ulReturnedIPAddress;
 
-    /* Obtain the global synchronization mutex. */
-    if( xSemaphoreTake( xSyncMutex, xMaxSemaphoreBlockTime ) == pdTRUE )
+    if( xSemaphoreTake( xGetHostByName, xMaxSemaphoreBlockTime ) == pdPASS )
     {
         /* Call the TI GetHostByName. */
-        sTIRetCode = sl_NetAppDnsGetHostByName( ( const _i8 * ) pcHostName, /*lint !e605 pcHostName will be interpreted as characters. */
+        sTIRetCode = sl_NetAppDnsGetHostByName( ( _i8 * ) pcHostName, /*lint !e605 pcHostName will be interpreted as characters. */
                                                 ( _u16 ) strlen( pcHostName ),
                                                 &( ulResolvedIPAddress ),
                                                 ( _u8 ) SL_AF_INET );
+        ( void ) xSemaphoreGive( xGetHostByName );
+    }
 
-        if( sTIRetCode == 0 )
-        {
-            /* Convert to network byte order. */
-            ulReturnedIPAddress = ( uint32_t ) sl_Htonl( ulResolvedIPAddress );
-        }
-        else
-        {
-            /* Return 0 in case of an error. */
-            ulReturnedIPAddress = 0;
-        }
-
-        /* Return the global synchronization mutex. */
-        ( void ) xSemaphoreGive( xSyncMutex );
+    if( sTIRetCode == 0 )
+    {
+        /* Convert to network byte order. */
+        ulReturnedIPAddress = ( uint32_t ) sl_Htonl( ulResolvedIPAddress );
     }
     else
     {
-        configPRINTF( ( "ERROR: SOCKETS_GetHostByName - Couldn't take the global synchronization mutex.\r\n" ) );
+        /* Return 0 in case of an error. */
         ulReturnedIPAddress = 0;
     }
 
@@ -1390,6 +1294,9 @@ uint32_t SOCKETS_GetHostByName( const char * pcHostName )
  *
  * @note This is executed asynchronously in the context of SimpleLink
  * task.
+ *
+ * @note SimpleLink error codes can be found in
+ * \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h
  *
  * @param[in] pSlSockEvent Pointer to Socket Event Info.
  */
@@ -1488,7 +1395,7 @@ void SimpleLinkSockEventHandler( SlSockEvent_t * pSlSockEvent )
                 default:
 
                     configPRINTF( ( "[SimpleLinkSockEventHandler EVENT]: Unexpected Event: %d, Socket: %d Reason: %d.\r\n",
-                                    pSlSockEvent->SocketAsyncEvent,
+                                    pSlSockEvent->SocketAsyncEvent.SockAsyncData.Type,
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Sd,
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Val ) );
 

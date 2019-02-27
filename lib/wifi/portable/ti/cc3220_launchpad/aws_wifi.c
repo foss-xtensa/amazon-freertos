@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS WiFi V1.0.0
+ * Amazon FreeRTOS Wi-Fi for CC3220SF-LAUNCHXL V1.0.1
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -460,6 +459,7 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
     WIFIReturnCode_t xRetVal = eWiFiSuccess;
     int32_t lRetVal;
     SlWlanSecParams_t xSecurityParams = { 0 };
+    char cPcSsid[ wificonfigMAX_SSID_LEN ] = { 0 };
 
     /* Try to acquire the semaphore. */
     if( xSemaphoreTake( xWiFiSemaphoreHandle, xSemaphoreWaitTicks ) == pdTRUE )
@@ -485,9 +485,11 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
             xSecurityParams.Key = ( signed char * ) pxNetworkParams->pcPassword;
             xSecurityParams.KeyLen = pxNetworkParams->ucPasswordLength;
             xSecurityParams.Type = prvConvertSecurityAbstractedToTI( pxNetworkParams->xSecurity );
+            memcpy( cPcSsid, pxNetworkParams->pcSSID, pxNetworkParams->ucSSIDLength );
 
-            /* Connect to the Access Point. */
-            lRetVal = Network_IF_ConnectAP( ( char * ) pxNetworkParams->pcSSID,
+            /* Connect to the Access Point. If the credentials are incorrect this
+             * function will ask for an open SSID. */
+            lRetVal = Network_IF_ConnectAP( cPcSsid,
                                             xSecurityParams );
 
             if( lRetVal < 0 )

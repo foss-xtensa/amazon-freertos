@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS V1.0.0
+ * Amazon FreeRTOS V1.2.1
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -54,6 +53,15 @@
 #include "aws_demo_logging.h"
 #include "aws_system_init.h"
 #include "aws_demo_runner.h"
+#include "aws_application_version.h"
+#include "aws_dev_mode_key_provisioning.h"
+
+/* Declare the firmware version structure for all to see. */
+const AppVersion32_t xAppFirmwareVersion = {
+   .u.x.ucMajor = APP_VERSION_MAJOR,
+   .u.x.ucMinor = APP_VERSION_MINOR,
+   .u.x.usBuild = APP_VERSION_BUILD,
+};
 
 /* Define a name that will be used for LLMNR and NBNS searches. Once running,
  * you can "ping RTOSDemo" instead of pinging the IP address, which is useful when
@@ -206,6 +214,11 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
          * created. */
         if( xTasksAlreadyCreated == pdFALSE )
         {
+            /* A simple example to demonstrate key and certificate provisioning in
+             * microcontroller flash using PKCS#11 interface. This should be replaced
+             * by production ready key provisioning mechanism. */
+            vDevModeKeyProvisioning( );
+
             /* Initialize AWS system libraries */
             SYSTEM_Init();
 
@@ -261,7 +274,7 @@ uint32_t ulRand( void )
 
     ulNextRand = ( ulMultiplier * ulNextRand ) + ulIncrement;
 
-    return( ( int ) ( ulNextRand >> 16UL ) & 0x7fffUL );
+    return( ( uint32_t ) ( ulNextRand >> 16UL ) & 0x7fffUL );
 }
 /*-----------------------------------------------------------*/
 
@@ -313,9 +326,8 @@ static void prvMiscInitialisation( void )
 
     const char * pcApplicationHostnameHook( void )
     {
-        /* Assign the name "FreeRTOS" to this network node.  This function will
-         * be called during the DHCP: the machine will be registered with an IP
-         * address plus this name. */
+        /* This function will be called during the DHCP: the machine will be registered 
+         * with an IP address plus this name. */
         return mainHOST_NAME;
     }
 

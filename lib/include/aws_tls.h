@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -73,6 +72,8 @@ typedef struct xTLS_PARAMS
     const char * pcDestination;
     const char * pcServerCertificate;
     uint32_t ulServerCertificateLength;
+    const char ** ppcAlpnProtocols;
+    uint32_t ulAlpnProtocolsCount;
 
     NetworkRecv_t pxNetworkRecv;
     NetworkSend_t pxNetworkSend;

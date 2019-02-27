@@ -1,6 +1,6 @@
 /*
  * Amazon FreeRTOS Secure Socket V1.0.0
- * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -40,23 +39,6 @@ Socket_t SOCKETS_Socket( int32_t lDomain,
 {
     /* FIX ME. */
     return ( Socket_t ) SOCKETS_INVALID_SOCKET;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Bind( Socket_t xSocket,
-                      SocketsSockaddr_t * pxAddress,
-                      Socklen_t xAddressLength )
-{
-    /* FIX ME. */
-    return SOCKETS_SOCKET_ERROR;
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Listen( Socket_t xSocket,
-                        int32_t lBacklog )
-{
-    /* FIX ME. */
-    return SOCKETS_SOCKET_ERROR;
 }
 /*-----------------------------------------------------------*/
 

@@ -1,5 +1,5 @@
 /*
- * FreeRTOS Kernel V10.0.0
+ * FreeRTOS Kernel V10.0.1
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -10,8 +10,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -29,7 +28,11 @@
 
 
 #ifndef UART_PRINT
+
+/* Ensure stdint is only used by the compiler, and not the assembler. */
+#ifndef __ASSEMBLER__
     #include "uart_term.h"
+#endif
     #define UART_PRINT    Report
 #endif
 
@@ -90,10 +93,12 @@
 /* Needed for POSIX/pthread. */
 #define configUSE_APPLICATION_TASK_TAG           1
 
-/* The function that implements FreeRTOS printf style outout, and the macro
+/* The function that implements FreeRTOS printf style output, and the macro
  * that maps the configPRINTF() macros to that function. */
+#ifndef __ASSEMBLER__ /* Ensure stdint is only used by the compiler, and not the assembler. */
 extern void vLoggingPrintf( const char * pcFormat,
                             ... );
+#endif
 #define configPRINTF( X )    vLoggingPrintf X
 
 
@@ -102,7 +107,7 @@ extern void vLoggingPrintf( const char * pcFormat,
 
 /* Sets the length of the buffers into which logging messages are written - so
  * also defines the maximum length of each log message. */
-#define configLOGGING_MAX_MESSAGE_LENGTH            100
+#define configLOGGING_MAX_MESSAGE_LENGTH            128
 
 /* Set to 1 to prepend each log message with a message number, the task name,
  * and a time stamp. */
