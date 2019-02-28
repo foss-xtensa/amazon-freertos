@@ -213,7 +213,7 @@ typedef enum
  */
 typedef struct MQTTConnACKData
 {
-    MQTTConnACKReturnCode_t xConnACkReturnCode; /**< CONNACK return code. @see MQTTConnACKReturnCode_t. */
+    MQTTConnACKReturnCode_t xConnACKReturnCode; /**< CONNACK return code. @see MQTTConnACKReturnCode_t. */
     uint16_t usPacketIdentifier;                /**< Packet identifier which the user can use to match the CONNACK with the Connect request. */
 } MQTTConnACKData_t;
 
@@ -319,8 +319,8 @@ typedef struct MQTTCallbackParams
  * the callback is over. The user should return the buffer whenever done by calling the
  * MQTT_ReturnBuffer API.
  */
-typedef MQTTBool_t ( * MQTTEventCallback_t ) ( void * pvCallbackContext,
-                                               const MQTTEventCallbackParams_t * const pxParams );
+typedef MQTTBool_t ( * MQTTEventCallback_t )( void * pvCallbackContext,
+                                              const MQTTEventCallbackParams_t * const pxParams );
 
 /**
  * @brief Signature of the user supplied topic specific publish callback which gets called
@@ -346,10 +346,10 @@ typedef MQTTBool_t ( * MQTTEventCallback_t ) ( void * pvCallbackContext,
  * the callback is over. The user should return the buffer whenever done by calling the
  * MQTT_ReturnBuffer API.
  */
-#ifdef mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT
+#if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
-    typedef MQTTBool_t ( * MQTTPublishCallback_t ) ( void * pvPublishCallbackContext,
-                                                     const MQTTPublishData_t * const pxPublishData );
+    typedef MQTTBool_t ( * MQTTPublishCallback_t )( void * pvPublishCallbackContext,
+                                                    const MQTTPublishData_t * const pxPublishData );
 
 #endif /* mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT */
 
@@ -365,9 +365,9 @@ typedef MQTTBool_t ( * MQTTEventCallback_t ) ( void * pvCallbackContext,
  *
  * @return The number of bytes actually transmitted.
  */
-typedef uint32_t ( * MQTTSend_t ) ( void * pvSendContext,
-                                    const uint8_t * const pucData,
-                                    uint32_t ulDataLength );
+typedef uint32_t ( * MQTTSend_t )( void * pvSendContext,
+                                   const uint8_t * const pucData,
+                                   uint32_t ulDataLength );
 
 /**
  * @brief Signature of the callback to get the current tick count.
@@ -378,7 +378,7 @@ typedef uint32_t ( * MQTTSend_t ) ( void * pvSendContext,
  *
  * @param[out] pxCurrentTickCount The output parameter to receive the current tick count.
  */
-typedef void ( * MQTTGetTicks_t ) ( uint64_t * pxCurrentTickCount );
+typedef void ( * MQTTGetTicks_t )( uint64_t * pxCurrentTickCount );
 
 /**
  * @brief Signature of the callback supplied by the user as part
@@ -396,7 +396,7 @@ typedef void ( * MQTTGetTicks_t ) ( uint64_t * pxCurrentTickCount );
  *
  * @return The pointer to the buffer if one is available, NULL otherwise.
  */
-typedef uint8_t * ( * MQTTGetFreeBuffer_t ) ( uint32_t * pulBufferLength );
+typedef uint8_t * ( * MQTTGetFreeBuffer_t )( uint32_t * pulBufferLength );
 
 /**
  * @brief Signature of the callback supplied by the user as part
@@ -408,12 +408,12 @@ typedef uint8_t * ( * MQTTGetFreeBuffer_t ) ( uint32_t * pulBufferLength );
  *
  * @param[in] pucBuffer The buffer to return.
  */
-typedef void ( * MQTTReturnBuffer_t ) ( uint8_t * pucBuffer );
+typedef void ( * MQTTReturnBuffer_t )( uint8_t * pucBuffer );
 
 /**
  * @brief Represents a subscription entry in the subscription manager.
  */
-#ifdef mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT
+#if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
     typedef struct MQTTSubscription
     {
@@ -431,7 +431,7 @@ typedef void ( * MQTTReturnBuffer_t ) ( uint8_t * pucBuffer );
  * @brief The subscription manager used to keep track of user subscriptions
  * and topic specific callbacks.
  */
-#ifdef mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT
+#if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
     typedef struct MQTTSubscriptionManager
     {
@@ -489,7 +489,7 @@ typedef struct MQTTContext
     uint32_t ulKeepAliveActualIntervalTicks;                    /**< The time interval in ticks after which a keep alive message should be sent. */
     uint32_t ulPingRequestTimeoutTicks;                         /**< The time interval in ticks to wait for PINGRESP after sending PINGREQ. */
     MQTTBool_t xWaitingForPingResp;                             /**< Whether a keep alive message has been sent and we are waiting for response from the broker. */
-    #ifdef mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT
+    #if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
         MQTTSubscriptionManager_t xSubscriptionManager;         /**< The subscription manager used to keep track of user subscriptions and topic specific callbacks.*/
     #endif /* mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT */
 } MQTTContext_t;
@@ -516,7 +516,7 @@ typedef struct MQTTInitParams
  */
 typedef struct MQTTConnectParams
 {
-    uint16_t usKeepAliveIntervlSeconds;      /**< The maximum time interval (in seconds) permitted to elapse between two control packets transmitted. */
+    uint16_t usKeepAliveIntervalSeconds;     /**< The maximum time interval (in seconds) permitted to elapse between two control packets transmitted. */
     uint32_t ulKeepAliveActualIntervalTicks; /**< The time interval in ticks after which a keep alive message should be sent. Note that keep alive messages are sent only if nothing else is sent. */
     uint32_t ulPingRequestTimeoutTicks;      /**< The time interval in ticks to wait for PINGRESP after sending PINGREQ. */
     const uint8_t * pucClientId;             /**< Client Id identifies the client to the server. Must be unique per broker. */
@@ -539,7 +539,7 @@ typedef struct MQTTSubscribeParams
     MQTTQoS_t xQos;                              /**< Requested Quality of Service (QoS). */
     uint16_t usPacketIdentifier;                 /**< The same identifier is returned in the callback when corresponding SUBACK is received or the operation times out. */
     uint32_t ulTimeoutTicks;                     /**< The time interval in ticks after which the operation should fail. */
-    #ifdef mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT
+    #if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
         void * pvPublishCallbackContext;         /**< Passed as it is in the publish callback. */
         MQTTPublishCallback_t pxPublishCallback; /**< Callback function to be called whenever a publish message is received on this topic or on a topic which matches this
                                                   *   topic filter. If a publish message is received on a topic which matches more than one topic filters, the order in which

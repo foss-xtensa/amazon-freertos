@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS V1.2.1
+ * Amazon FreeRTOS V1.4.7
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -42,7 +42,7 @@
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
-#include "semphr.h"
+#include "event_groups.h"
 
 /* MQTT include. */
 #include "aws_mqtt_agent.h"
@@ -86,14 +86,14 @@
  */
 typedef struct SubpubUserData
 {
-    const char * pcExpectedString;      /**< Informs the MQTT callback of the next expected string. */
-    uint32_t ulExpectedUint32;          /**< Informs the MQTT callback of the next expected integer. */
-    BaseType_t xCallbackStatus;         /**< Used to communicate the success or failure of the callback function.
-                                         *   xCallbackStatus is set to pdFALSE before the callback is executed, and is
-                                         *   set to pdPASS inside the callback only if the callback receives the expected
-                                         *   data. */
-    SemaphoreHandle_t xWakeUpSemaphore; /**< Handle of semaphore to wake up the task. */
-    char cTopic[ subpubTopicSize ];     /**< Topic to subscribe and publish to. */
+    const char * pcExpectedString;        /**< Informs the MQTT callback of the next expected string. */
+    uint32_t ulExpectedUint32;            /**< Informs the MQTT callback of the next expected integer. */
+    BaseType_t xCallbackStatus;           /**< Used to communicate the success or failure of the callback function.
+                                           *   xCallbackStatus is set to pdFALSE before the callback is executed, and is
+                                           *   set to pdPASS inside the callback only if the callback receives the expected
+                                           *   data. */
+    StaticEventGroup_t xWakeUpEventGroup; /**< Event group used to synchronize tasks. */
+    char cTopic[ subpubTopicSize ];       /**< Topic to subscribe and publish to. */
 } SubpubUserData_t;
 
 /**
@@ -197,7 +197,7 @@ static MQTTBool_t prvMQTTUint32PublishCallback( void * pvCallbackContext,
  * @param[in] pvParameters If pdTRUE is passed, it connects to the secure
  * AWS IoT broker otherwise it connects to the unsecure broker.
  */
-static void prvPublishSubscribeTask( void * pvParameters ); /*_RB_ Should be in header file. */
+static void prvPublishSubscribeTask( void * pvParameters );
 
 
 /*-----------------------------------------------------------*/
@@ -205,7 +205,7 @@ static void prvPublishSubscribeTask( void * pvParameters ); /*_RB_ Should be in 
 /*
  * Collection of strings published.
  */
-const char * const pcLongString = "This is a long string that requires a length encoding greater than one byte. This tests the encoding and decoding of Remaining Length field in a MQTT packet.";
+static const char * const pcLongString = "This is a long string that requires a length encoding greater than one byte. This tests the encoding and decoding of Remaining Length field in a MQTT packet.";
 
 /* The maximum time to wait for an MQTT operation to complete.  Needs to be
  * long enough for the TLS negotiation to complete. */
@@ -251,7 +251,7 @@ static MQTTBool_t prvMQTTStringPublishCallback( void * pvCallbackContext,
     configPRINTF( ( "Received %.*s on topic %.*s\r\n", pxPublishData->ulDataLength,
                     ( char * ) pxPublishData->pvData,
                     ( size_t ) pxPublishData->usTopicLength,
-                    ( char * ) pxPublishData->pucTopic ) ); /*_RB_ Not portable code. */
+                    ( char * ) pxPublishData->pucTopic ) );
 
     /* Does the received string match the expected string? */
     pcReceivedString = ( char * ) pxPublishData->pvData;
@@ -269,13 +269,7 @@ static MQTTBool_t prvMQTTStringPublishCallback( void * pvCallbackContext,
     }
 
     /* Unblock the task as the callback has executed. */
-    if( xSemaphoreGive( pxUserData->xWakeUpSemaphore ) == pdFAIL )
-    {
-        /* In case the status has been set to pass. */
-        pxUserData->xCallbackStatus = pdFAIL;
-    }
-
-    configASSERT( pxUserData->xCallbackStatus == pdPASS );
+    ( void ) xEventGroupSetBits( ( EventGroupHandle_t ) &( pxUserData->xWakeUpEventGroup ), 1 );
 
     /* We do not want to take the ownership of buffer. */
     return xTakeOwnership;
@@ -312,13 +306,7 @@ static MQTTBool_t prvMQTTUint32PublishCallback( void * pvCallbackContext,
     }
 
     /* Unblock the task as the callback has executed. */
-    if( xSemaphoreGive( pxUserData->xWakeUpSemaphore ) == pdFAIL )
-    {
-        /* In case the status has been set to pass. */
-        pxUserData->xCallbackStatus = pdFAIL;
-    }
-
-    configASSERT( pxUserData->xCallbackStatus == pdPASS );
+    ( void ) xEventGroupSetBits( ( EventGroupHandle_t ) &( pxUserData->xWakeUpEventGroup ), 1 );
 
     /* We do not want to take the ownership of buffer. */
     return xTakeOwnership;
@@ -341,8 +329,8 @@ static BaseType_t prvUint32PublishSubscribe( MQTTAgentConnectParams_t * pxConnec
     xTickCount = xTaskGetTickCount();
     configPRINTF( ( "%s initiated connection to broker at time %u ticks.\r\n", __FUNCTION__, xTickCount ) );
 
-    strncpy( ( char * ) pxUserData->cTopic, ( char * ) pcTaskGetName( NULL ), subpubTopicSize );
-    strncat( ( char * ) pxUserData->cTopic, ( char * ) subpubUINT_TOPIC_PATH, subpubTopicSize );
+    strncpy( ( char * ) pxUserData->cTopic, ( char * ) pcTaskGetName( NULL ), subpubCHAR_TASK_NAME_MAX_SIZE );
+    strncat( ( char * ) pxUserData->cTopic, ( char * ) subpubUINT_TOPIC_PATH, sizeof( subpubSTRING_TOPIC_PATH ) );
 
     if( MQTT_AGENT_Connect( xMQTTClientHandle, pxConnectParams, xMaxCommandTime ) == eMQTTAgentSuccess )
     {
@@ -382,11 +370,14 @@ static BaseType_t prvUint32PublishSubscribe( MQTTAgentConnectParams_t * pxConnec
 
                 if( MQTT_AGENT_Publish( xMQTTClientHandle, &xPublishParams, xMaxCommandTime ) == eMQTTAgentSuccess )
                 {
-                    configPRINTF( ( "%s published to topic %s\r\n", __FUNCTION__, xPublishParams.pucTopic ) );
-
-                    /* The event callback will give this semaphore when it
-                     * executes, until then wait here. _RB_ At this time this demo does not have more than one message outstanding at a time. */
-                    if( xSemaphoreTake( pxUserData->xWakeUpSemaphore, xMaxCommandTime ) == pdPASS )
+                    /* The event callback will set bit 0 in this event group when it executes,
+                     * until then wait here. At this time this demo does not have more than one
+                     * message outstanding at a time. */
+                    if( xEventGroupWaitBits( ( EventGroupHandle_t ) &( pxUserData->xWakeUpEventGroup ),
+                                             1,
+                                             pdTRUE,
+                                             pdTRUE,
+                                             xMaxCommandTime ) == 1 )
                     {
                         /* Did the callback execute and pass?  If so the callback
                          * will have set xCallbackStatus to pdPASS. */
@@ -465,8 +456,8 @@ static BaseType_t prvStringPublishSubscribe( MQTTAgentConnectParams_t * pxConnec
     MQTTAgentUnsubscribeParams_t xUnsubscribeParams;
     BaseType_t xResult = pdPASS;
 
-    strncpy( ( char * ) pxUserData->cTopic, ( char * ) pcTaskGetName( NULL ), subpubTopicSize );
-    strncat( ( char * ) pxUserData->cTopic, ( char * ) subpubSTRING_TOPIC_PATH, subpubTopicSize );
+    strncpy( ( char * ) pxUserData->cTopic, ( char * ) pcTaskGetName( NULL ), subpubCHAR_TASK_NAME_MAX_SIZE );
+    strncat( ( char * ) pxUserData->cTopic, ( char * ) subpubSTRING_TOPIC_PATH, sizeof( subpubSTRING_TOPIC_PATH ) );
 
     if( MQTT_AGENT_Connect( xMQTTClientHandle, pxConnectParams, xMaxCommandTime ) == eMQTTAgentSuccess )
     {
@@ -511,9 +502,13 @@ static BaseType_t prvStringPublishSubscribe( MQTTAgentConnectParams_t * pxConnec
                 xResult = pdFAIL;
             }
 
-            /* The event callback will give this semaphore when it executes,
+            /* The event callback will set bit 0 in this event group when it executes,
              * until then wait here. */
-            if( xSemaphoreTake( pxUserData->xWakeUpSemaphore, xMaxCommandTime ) == pdFALSE )
+            if( xEventGroupWaitBits( ( EventGroupHandle_t ) &( pxUserData->xWakeUpEventGroup ),
+                                     1,
+                                     pdTRUE,
+                                     pdTRUE,
+                                     xMaxCommandTime ) != 1 )
             {
                 xResult = pdFAIL;
             }
@@ -542,9 +537,13 @@ static BaseType_t prvStringPublishSubscribe( MQTTAgentConnectParams_t * pxConnec
                 xResult = pdFAIL;
             }
 
-            /* The event callback will give this semaphore when it executes,
+            /* The event callback will set bit 0 in this event group when it executes,
              * until then wait here. */
-            if( xSemaphoreTake( pxUserData->xWakeUpSemaphore, xMaxCommandTime ) == pdFALSE )
+            if( xEventGroupWaitBits( ( EventGroupHandle_t ) &( pxUserData->xWakeUpEventGroup ),
+                                     1,
+                                     pdTRUE,
+                                     pdTRUE,
+                                     xMaxCommandTime ) != 1 )
             {
                 xResult = pdFAIL;
             }
@@ -598,11 +597,11 @@ static void prvSubscribePublishDemo( MQTTAgentHandle_t xMQTTClientHandle,
     BaseType_t xResult;
     MQTTAgentConnectParams_t xConnectParams;
     TaskStatus_t xTaskStatus;
-    SemaphoreHandle_t xCallbackSemaphore = NULL;
     SubpubUserData_t xUserData;
 
-    xCallbackSemaphore = xSemaphoreCreateBinary();
-    xUserData.xWakeUpSemaphore = xCallbackSemaphore;
+    /* Create the event group used to synchronize tasks and callback functions.
+     * This function will not fail when its argument isn't NULL. */
+    ( void ) xEventGroupCreateStatic( &( xUserData.xWakeUpEventGroup ) );
 
     /* Each function below connects then disconnects from the broker.  To save
      * each from having to setup the connect parameters the parameters are set up
@@ -658,12 +657,15 @@ static void prvSubscribePublishDemo( MQTTAgentHandle_t xMQTTClientHandle,
 
     if( xResult == pdPASS )
     {
-        /* Report on space efficiency of this demo task. */
-        vTaskGetInfo( NULL, &xTaskStatus, pdTRUE, eInvalid );
-        configPRINTF(
-            ( "Heap low-water mark %u, Stack high-water mark %u.\r\n",
-              xPortGetMinimumEverFreeHeapSize(),
-              xTaskStatus.usStackHighWaterMark ) );
+        #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
+            {
+                /* Report on space efficiency of this demo task. */
+                vTaskGetInfo( NULL, &xTaskStatus, pdTRUE, eInvalid );
+                configPRINTF( ( "Heap low-water mark %u, Stack high-water mark %u.\r\n",
+                                xPortGetMinimumEverFreeHeapSize(),
+                                xTaskStatus.usStackHighWaterMark ) );
+            }
+        #endif
         configPRINTF( ( "All the MQTT tests passed! \r\n" ) );
     }
     else
@@ -693,9 +695,7 @@ void prvPublishSubscribeTask( void * pvParameters )
     configPRINTF( ( "Creating MQTT Client...\r\n" ) );
 
     /* Create MQTT Client.  This is used for all publishes and subscribes
-     * performed by this demo. _RB_ Will creating this here prevent other demos
-     * creating their own clients?  If so, this should be down outside of this
-     * file. */
+     * performed by this demo. */
     if( MQTT_AGENT_Create( &( xMQTTClientHandle ) ) == eMQTTAgentSuccess )
     {
         configPRINTF( ( "MQTT Client Created.\r\n" ) );
@@ -716,7 +716,7 @@ void prvPublishSubscribeTask( void * pvParameters )
     }
 
     /* This task has finished.  FreeRTOS does not allow a task to run off the
-     * end of its implementing function, so the task must be deleted. _RB_ have all buffers been freed? */
+     * end of its implementing function, so the task must be deleted. */
     vTaskDelete( NULL );
 }
 /*-----------------------------------------------------------*/

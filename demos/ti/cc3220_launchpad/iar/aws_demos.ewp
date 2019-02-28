@@ -211,8 +211,8 @@
                 <debug>1</debug>
                 <option>
                     <name>CCDefines</name>
-                    <state>_DLIB_FILE_DESCRIPTOR
-</state>
+                    <state>_DLIB_FILE_DESCRIPTOR</state>
+                    <state>__little_endian__</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -342,10 +342,7 @@
                 </option>
                 <option>
                     <name>CCIncludePath2</name>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source</state>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi</state>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix</state>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sys</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source</state>
                     <state>$PROJ_DIR$\..\common</state>
                     <state>$PROJ_DIR$\..\..\..\..\lib</state>
                     <state>$PROJ_DIR$\..\..\..\..\lib\ota\portable\ti\cc3220_launchpad</state>
@@ -362,6 +359,10 @@
                     <state>$PROJ_DIR$\..\..\..\..\lib\include\private</state>
                     <state>$PROJ_DIR$\..\..\..\common\include</state>
                     <state>$TOOLKIT_DIR$\inc</state>
+                    <state>$TOOLKIT_DIR$\inc\c</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\include</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\include\portable\ti\cc3220_launchpad</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -628,7 +629,7 @@
                 <option>
                     <name>AUserIncludes</name>
                     <state>$PROJ_DIR$\..\common\application_code\ti_code</state>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source</state>
                     <state>$PROJ_DIR$\..\common\config_files</state>
                 </option>
                 <option>
@@ -782,7 +783,7 @@
                 </option>
                 <option>
                     <name>IlinkIcfFile</name>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\boards\CC3220SF_LAUNCHXL\CC3220SF_LAUNCHXL_FREERTOS.icf</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\boards\CC3220SF_LAUNCHXL\CC3220SF_LAUNCHXL_FREERTOS.icf</state>
                 </option>
                 <option>
                     <name>IlinkIcfFileSlave</name>
@@ -818,9 +819,9 @@
                 </option>
                 <option>
                     <name>IlinkExtraOptions</name>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\iar\rtos\simplelink.a</state>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\devices\cc32xx\driverlib\iar\Release\driverlib.a</state>
-                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\lib\drivers_cc32xx.arm4</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\iar\rtos\simplelink.a</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\devices\cc32xx\driverlib\iar\Release\driverlib.a</state>
+                    <state>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\lib\drivers_cc32xx.arm4</state>
                 </option>
                 <option>
                     <name>IlinkLowLevelInterfaceSlave</name>
@@ -1164,6 +1165,9 @@
             <name>$PROJ_DIR$\..\common\config_files\aws_mqtt_config.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\common\config_files\aws_ota_agent_config.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\common\config_files\aws_secure_sockets_config.h</name>
         </file>
         <file>
@@ -1235,6 +1239,60 @@
                 </file>
             </group>
             <group>
+                <name>FreeRTOS-Plus-POSIX</name>
+                <group>
+                    <name>include</name>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\include\FreeRTOS_POSIX.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\include\FreeRTOS_POSIX_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\include\portable\ti\cc3220_launchpad\FreeRTOS_POSIX_portable.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\include\portable\FreeRTOS_POSIX_portable_default.h</name>
+                    </file>
+                </group>
+                <group>
+                    <name>source</name>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_clock.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_mqueue.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_pthread.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_pthread_barrier.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_pthread_cond.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_pthread_mutex.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_sched.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_semaphore.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_timer.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_unistd.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\FreeRTOS-Plus-POSIX\source\FreeRTOS_POSIX_utils.c</name>
+                    </file>
+                </group>
+            </group>
+            <group>
                 <name>greengrass</name>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\greengrass\aws_greengrass_discovery.c</name>
@@ -1245,41 +1303,122 @@
             </group>
             <group>
                 <name>include</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_bufferpool.h</name>
-                </file>
+                <group>
+                    <name>FreeRTOS_POSIX</name>
+                    <group>
+                        <name>sys</name>
+                        <file>
+                            <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\sys\types.h</name>
+                        </file>
+                    </group>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\errno.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\fcntl.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\mqueue.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\pthread.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\sched.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\semaphore.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\signal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\time.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\unistd.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS_POSIX\utils.h</name>
+                    </file>
+                </group>
+                <group>
+                    <name>private</name>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_bufferpool.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_default_root_certificates.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_doubly_linked_list.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ggd_config_defaults.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_helper_secure_connect.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_lib_init.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_mqtt_agent_config_defaults.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_mqtt_buffer.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_mqtt_config_defaults.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ota_cbor.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ota_pal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ota_types.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_rsprintf.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_secure_sockets_config_defaults.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_shadow_config_defaults.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_shadow_json.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\deprecated_definitions.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\list.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\mpu_wrappers.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\portable.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\projdefs.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\include\private\stack_macros.h</name>
+                    </file>
+                </group>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_crypto.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_default_root_certificates.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_doubly_linked_list.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ggd_config_defaults.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_greengrass_discovery.h</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_helper_secure_connect.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_lib_init.h</name>
-                </file>
-                <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_mqtt_agent.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_mqtt_agent_config_defaults.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_mqtt_buffer.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_mqtt_config_defaults.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_mqtt_lib.h</name>
@@ -1288,34 +1427,13 @@
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_ota_agent.h</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ota_cbor.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ota_pal.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_ota_types.h</name>
-                </file>
-                <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_pkcs11.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_rsprintf.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_secure_sockets.h</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_secure_sockets_config_defaults.h</name>
-                </file>
-                <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_shadow.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_shadow_config_defaults.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\aws_shadow_json.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_system_init.h</name>
@@ -1327,37 +1445,19 @@
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\aws_wifi.h</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\deprecated_definitions.h</name>
-                </file>
-                <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\event_groups.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\FreeRTOS.h</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\list.h</name>
-                </file>
-                <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\message_buffer.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\mpu_wrappers.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\portable.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\projdefs.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\queue.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\semphr.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\include\private\stack_macros.h</name>
                 </file>
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\include\stream_buffer.h</name>
@@ -1389,14 +1489,11 @@
                 <file>
                     <name>$PROJ_DIR$\..\..\..\..\lib\ota\portable\ti\cc3220_launchpad\aws_ota_pal.c</name>
                 </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\ota\aws_rsprintf.c</name>
-                </file>
             </group>
             <group>
                 <name>pkcs11</name>
                 <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\pkcs11\portable\ti\cc3220_launchpad\pkcs11.c</name>
+                    <name>$PROJ_DIR$\..\..\..\..\lib\pkcs11\portable\ti\cc3220_launchpad\aws_pkcs11_pal.c</name>
                 </file>
             </group>
             <group>
@@ -1439,122 +1536,485 @@
                 </file>
             </group>
             <group>
-                <name>mbedtls</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\base64.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\base64.h</name>
-                </file>
+                <name>mbedTLS</name>
+                <group>
+                    <name>include</name>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\aes.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\aesni.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\arc4.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\asn1.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\asn1write.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\base64.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\bignum.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\blowfish.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\bn_mul.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\camellia.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ccm.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\certs.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\check_config.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\cipher.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\cipher_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\cmac.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\compat-1.3.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\config.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ctr_drbg.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\debug.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\des.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\dhm.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ecdh.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ecdsa.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ecjpake.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ecp.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ecp_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\entropy.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\entropy_poll.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\error.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\gcm.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\havege.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\hmac_drbg.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\md.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\md2.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\md4.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\md5.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\md_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\memory_buffer_alloc.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\net.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\net_sockets.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\oid.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\padlock.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\pem.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\pk.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\pk_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\pkcs12.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\pkcs5.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\platform.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\platform_time.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\platform_util.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ripemd160.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\rsa.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\rsa_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\sha1.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\sha256.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\sha512.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ssl.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ssl_cache.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ssl_ciphersuites.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ssl_cookie.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ssl_internal.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\ssl_ticket.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\threading.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\timing.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\version.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\x509.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\x509_crl.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\x509_crt.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\x509_csr.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\include\mbedtls\xtea.h</name>
+                    </file>
+                </group>
+                <group>
+                    <name>mbedtls</name>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\aes.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\aesni.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\arc4.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\asn1parse.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\asn1write.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\base64.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\bignum.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\blowfish.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\camellia.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ccm.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\certs.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\cipher.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\cipher_wrap.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\cmac.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ctr_drbg.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\debug.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\des.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\dhm.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ecdh.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ecdsa.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ecjpake.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ecp.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ecp_curves.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\entropy.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\entropy_poll.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\error.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\gcm.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\havege.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\hmac_drbg.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\md.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\md2.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\md4.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\md5.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\md_wrap.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\memory_buffer_alloc.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\net_sockets.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\oid.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\padlock.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pem.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pk.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pk_wrap.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pkcs12.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pkcs5.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pkparse.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\pkwrite.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\platform.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\platform_util.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ripemd160.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\rsa.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\rsa_internal.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\sha1.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\sha256.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\sha512.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_cache.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_ciphersuites.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_cli.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_cookie.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_srv.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_ticket.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\ssl_tls.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\threading.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\timing.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\version.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\version_features.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509_create.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509_crl.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509_crt.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509_csr.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509write_crt.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\x509write_csr.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mbedtls\library\xtea.c</name>
+                    </file>
+                </group>
             </group>
             <group>
                 <name>mcu_vendor</name>
                 <group>
-                    <name>v1.40.01.00_kernel_freertos</name>
+                    <name>ti</name>
                     <group>
-                        <name>dpl</name>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\ClockP_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\DebugP_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\HwiPCC32XX_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\MutexP_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\PowerCC32XX_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\SemaphoreP_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\dpl\SystemP_freertos.c</name>
-                        </file>
-                    </group>
-                    <group>
-                        <name>posix</name>
+                        <name>SimpleLink_CC32xx</name>
                         <group>
-                            <name>sys</name>
-                            <file>
-                                <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sys\signal.h</name>
-                            </file>
-                            <file>
-                                <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sys\time.h</name>
-                            </file>
-                            <file>
-                                <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sys\types.h</name>
-                            </file>
+                            <name> v2_10_00_04</name>
+                            <group>
+                                <name>kernel</name>
+                                <group>
+                                    <name>dpl</name>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\ClockP_freertos.c</name>
+                                    </file>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\DebugP_freertos.c</name>
+                                    </file>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\HwiPCC32XX_freertos.c</name>
+                                    </file>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\MutexP_freertos.c</name>
+                                    </file>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\PowerCC32XX_freertos.c</name>
+                                    </file>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\SemaphoreP_freertos.c</name>
+                                    </file>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\SystemP_freertos.c</name>
+                                    </file>
+                                </group>
+                                <group>
+                                    <name>startup</name>
+                                    <file>
+                                        <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\startup\startup_cc32xx_iar.c</name>
+                                    </file>
+                                </group>
+                            </group>
                         </group>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\clock_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\errno.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\memory_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\mqueue.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\mqueue_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\pthread.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\pthread_barrier_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\pthread_cond_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\pthread_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\pthread_mutex_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\pthread_rwlock_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sched.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sched_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\semaphore.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\semaphore_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\signal.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\sleep_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\time.h</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\timer_freertos.c</name>
-                        </file>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\posix\unistd.h</name>
-                        </file>
-                    </group>
-                    <group>
-                        <name>startup</name>
-                        <file>
-                            <name>$PROJ_DIR$\..\..\..\..\lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\kernel\freertos\startup\startup_cc32xx_iar.c</name>
-                        </file>
                     </group>
                 </group>
             </group>

@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS V1.2.1
+ * Amazon FreeRTOS V1.4.7
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -41,19 +41,7 @@
  * metric information will be included in the "username" field of
  * the MQTT connect messages.
  */
-#define mqttconfigENABLE_METRICS    ( 1 )
-
-/**
- * @defgroup Metrics The metrics reported to the AWS IoT broker.
- *
- * If mqttconfigENABLE_METRICS is set to 1, these will be included
- * in the "username" field of MQTT connect messages.
- */
-/** @{ */
-#define mqttconfigMETRIC_SDK         "SDK=AmazonFreeRTOS"               /**< The SDK used by this device. */
-#define mqttconfigMETRIC_VERSION     "Version="tskKERNEL_VERSION_NUMBER /**< The version number of this SDK. */
-#define mqttconfigMETRIC_PLATFORM    "Platform=Unknown"                 /**< *FIX ME: Replace 'Unkown' with your platform name.* The platform that this SDK is running on. */
-/** @} */
+#define mqttconfigENABLE_METRICS                      ( 1 )
 
 /**
  * @brief The maximum time interval in seconds allowed to elapse between 2 consecutive
@@ -92,21 +80,26 @@
 /**
  * @brief Maximum number of MQTT clients that can exist simultaneously.
  */
-#define mqttconfigMAX_BROKERS            ( 4 )
+#define mqttconfigMAX_BROKERS                  ( 4 )
 
 /**
  * @brief Maximum number of parallel operations per client.
  */
-#define mqttconfigMAX_PARALLEL_OPS       ( 5 )
+#define mqttconfigMAX_PARALLEL_OPS             ( 5 )
 
 /**
  * @brief Time in milliseconds after which the TCP send operation should timeout.
  */
-#define mqttconfigTCP_SEND_TIMEOUT_MS    ( 2000 )
+#define mqttconfigTCP_SEND_TIMEOUT_MS          ( 2000 )
 
 /**
  * @brief Length of the buffer used to receive data.
  */
-#define mqttconfigRX_BUFFER_SIZE         ( 128 )
+#define mqttconfigRX_BUFFER_SIZE               ( 128 )
+
+/**
+ * @brief The maximum time in ticks for which the MQTT task is permitted to block.
+ */
+#define mqttconfigMQTT_TASK_MAX_BLOCK_TICKS    ( 100 )
 
 #endif /* _AWS_MQTT_AGENT_CONFIG_H_ */

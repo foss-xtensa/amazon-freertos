@@ -1,8 +1,6 @@
 ## Getting Started
 
-For more information on getting started with your download, refer to the [Getting Started section of Amazon FreeRTOS webpage](https://aws.amazon.com/freertos).
-
-For more information on Amazon FreeRTOS, refer to the [Amazon FreeRTOS User Guide](https://aws.amazon.com/documentation/freertos).
+For detailed documentation on Amazon FreeRTOS, refer to the [Amazon FreeRTOS User Guide](https://aws.amazon.com/documentation/freertos).
 
 For more information on using the Xtensa port, refer to the files:
 

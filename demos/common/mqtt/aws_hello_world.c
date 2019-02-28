@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS MQTT Echo Demo V1.2.1
+ * Amazon FreeRTOS MQTT Echo Demo V1.4.7
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -82,30 +82,36 @@
  *
  * It must be unique per MQTT broker.
  */
-#define echoCLIENT_ID          ( ( const uint8_t * ) "MQTTEcho" )
+#define echoCLIENT_ID            ( ( const uint8_t * ) "MQTTEcho" )
 
 /**
  * @brief The topic that the MQTT client both subscribes and publishes to.
  */
-#define echoTOPIC_NAME         ( ( const uint8_t * ) "freertos/demos/echo" )
+#define echoTOPIC_NAME           ( ( const uint8_t * ) "freertos/demos/echo" )
 
 /**
  * @brief The string appended to messages that are echoed back to the MQTT broker.
  *
  * It is also used to detect if a received message has already been acknowledged.
  */
-#define echoACK_STRING         ( ( const char * ) " ACK" )
+#define echoACK_STRING           ( ( const char * ) " ACK" )
+
+/**
+ * @brief The length of the ACK string appended to messages that are echoed back
+ * to the MQTT broker.
+ */
+#define echoACK_STRING_LENGTH    4
 
 /**
  * @brief Dimension of the character array buffers used to hold data (strings in
  * this case) that is published to and received from the MQTT broker (in the cloud).
  */
-#define echoMAX_DATA_LENGTH    20
+#define echoMAX_DATA_LENGTH      20
 
 /**
  * @brief A block time of 0 simply means "don't block".
  */
-#define echoDONT_BLOCK         ( ( TickType_t ) 0 )
+#define echoDONT_BLOCK           ( ( TickType_t ) 0 )
 
 /*-----------------------------------------------------------*/
 
@@ -181,9 +187,9 @@ static BaseType_t prvCreateClientAndConnectToBroker( void )
     MQTTAgentConnectParams_t xConnectParameters =
     {
         clientcredentialMQTT_BROKER_ENDPOINT, /* The URL of the MQTT broker to connect to. */
-        mqttagentREQUIRE_TLS,                 /* Connection flags. */
+        democonfigMQTT_AGENT_CONNECT_FLAGS,   /* Connection flags. */
         pdFALSE,                              /* Deprecated. */
-        clientcredentialMQTT_BROKER_PORT,     /* Port number on which the MQTT broker is listening. */
+        clientcredentialMQTT_BROKER_PORT,     /* Port number on which the MQTT broker is listening. Can be overridden by ALPN connection flag. */
         echoCLIENT_ID,                        /* Client Identifier of the MQTT client. It should be unique per broker. */
         0,                                    /* The length of the client Id, filled in later as not const. */
         pdFALSE,                              /* Deprecated. */
@@ -218,7 +224,7 @@ static BaseType_t prvCreateClientAndConnectToBroker( void )
         {
             /* Could not connect, so delete the MQTT client. */
             ( void ) MQTT_AGENT_Delete( xMQTTHandle );
-            configPRINTF( ( "ERROR:  MQTT echo failed to connect.\r\n" ) );
+            configPRINTF( ( "ERROR:  MQTT echo failed to connect with error %d.\r\n", xReturned ) );
         }
         else
         {
@@ -277,7 +283,7 @@ static void prvMessageEchoingTask( void * pvParameters )
 {
     MQTTAgentPublishParams_t xPublishParameters;
     MQTTAgentReturnCode_t xReturned;
-    char cDataBuffer[ echoMAX_DATA_LENGTH * 2 ];
+    char cDataBuffer[ echoMAX_DATA_LENGTH + echoACK_STRING_LENGTH ];
     size_t xBytesReceived;
 
     /* Remove compiler warnings about unused parameters. */
@@ -303,8 +309,10 @@ static void prvMessageEchoingTask( void * pvParameters )
                                                 sizeof( cDataBuffer ),
                                                 portMAX_DELAY );
 
-        /* Ensure the ACK can be added without overflowing the buffer. */
-        if( xBytesReceived < ( sizeof( cDataBuffer ) - strlen( echoACK_STRING ) - ( size_t ) 1 ) )
+        /* Ensure the ACK can be added without overflowing the buffer.
+        * Note that xBytesReceived already includes null character as
+        * it is written to the message buffer in the MQTT callback. */
+        if( xBytesReceived <= ( sizeof( cDataBuffer ) - ( size_t ) echoACK_STRING_LENGTH ) )
         {
             /* Append ACK to the received message. Note that
              * strcat appends terminating null character to the
@@ -372,8 +380,10 @@ static BaseType_t prvSubscribe( void )
 static MQTTBool_t prvMQTTCallback( void * pvUserData,
                                    const MQTTPublishData_t * const pxPublishParameters )
 {
-    char cBuffer[ echoMAX_DATA_LENGTH ];
-    uint32_t ulBytesToCopy = ( echoMAX_DATA_LENGTH - 1 ); /* Bytes to copy initialized to ensure it fits in the buffer. One place is left for NULL terminator. */
+    char cBuffer[ echoMAX_DATA_LENGTH + echoACK_STRING_LENGTH ];
+    uint32_t ulBytesToCopy = ( echoMAX_DATA_LENGTH + echoACK_STRING_LENGTH - 1 ); /* Bytes to copy initialized to ensure it
+                                                                                   * fits in the buffer. One place is left
+                                                                                   * for NULL terminator. */
 
     /* Remove warnings about the unused parameters. */
     ( void ) pvUserData;
@@ -385,30 +395,34 @@ static MQTTBool_t prvMQTTCallback( void * pvUserData,
     /* THe ulBytesToCopy has already been initialized to ensure it does not copy
      * more bytes than will fit in the buffer.  Now check it does not copy more
      * bytes than are available. */
-    if( pxPublishParameters->ulDataLength < ulBytesToCopy )
+    if( pxPublishParameters->ulDataLength <= ulBytesToCopy )
     {
         ulBytesToCopy = pxPublishParameters->ulDataLength;
+
+        /* Set the buffer to zero and copy the data into the buffer to ensure
+         * there is a NULL terminator and the buffer can be accessed as a
+         * string. */
+        memset( cBuffer, 0x00, sizeof( cBuffer ) );
+        memcpy( cBuffer, pxPublishParameters->pvData, ( size_t ) ulBytesToCopy );
+
+        /* Only echo the message back if it has not already been echoed.  If the
+         * data has already been echoed then it will already contain the echoACK_STRING
+         * string. */
+        if( strstr( cBuffer, echoACK_STRING ) == NULL )
+        {
+            /* The string has not been echoed before, so send it to the publish
+             * task, which will then echo the data back.  Make sure to send the
+             * terminating null character as well so that the received buffer in
+             * EchoingTask can be printed as a C string.  THE DATA CANNOT BE ECHOED
+             * BACK WITHIN THE CALLBACK AS THE CALLBACK IS EXECUTING WITHINT THE
+             * CONTEXT OF THE MQTT TASK.  Calling an MQTT API function here could cause
+             * a deadlock. */
+            ( void ) xMessageBufferSend( xEchoMessageBuffer, cBuffer, ( size_t ) ulBytesToCopy + ( size_t ) 1, echoDONT_BLOCK );
+        }
     }
-
-    /* Set the buffer to zero and copy the data into the buffer to ensure
-     * there is a NULL terminator and the buffer can be accessed as a
-     * string. */
-    memset( cBuffer, 0x00, sizeof( cBuffer ) );
-    memcpy( cBuffer, pxPublishParameters->pvData, ( size_t ) ulBytesToCopy );
-
-    /* Only echo the message back if it has not already been echoed.  If the
-     * data has already been echoed then it will already contain the echoACK_STRING
-     * string. */
-    if( strstr( cBuffer, echoACK_STRING ) == NULL )
+    else
     {
-        /* The string has not been echoed before, so send it to the publish
-         * task, which will then echo the data back.  Make sure to send the
-         * terminating null character as well so that the received buffer in
-         * EchoingTask can be printed as a C string.  THE DATA CANNOT BE ECHOED
-         * BACK WITHIN THE CALLBACK AS THE CALLBACK IS EXECUTING WITHINT THE
-         * CONTEXT OF THE MQTT TASK.  Calling an MQTT API function here could cause
-         * a deadlock. */
-        ( void ) xMessageBufferSend( xEchoMessageBuffer, cBuffer, ( size_t ) ulBytesToCopy + ( size_t ) 1, echoDONT_BLOCK );
+        configPRINTF( ( "[WARN]: Dropping received message as it does not fit in the buffer.\r\n" ) );
     }
 
     /* The data was copied into the FreeRTOS message buffer, so the buffer
@@ -421,7 +435,8 @@ static MQTTBool_t prvMQTTCallback( void * pvUserData,
 
 static void prvMQTTConnectAndPublishTask( void * pvParameters )
 {
-    BaseType_t x, xReturned;
+    BaseType_t xX;
+    BaseType_t xReturned;
     const TickType_t xFiveSeconds = pdMS_TO_TICKS( 5000UL );
     const BaseType_t xIterationsInAMinute = 60 / 5;
     TaskHandle_t xEchoingTask = NULL;
@@ -467,9 +482,9 @@ static void prvMQTTConnectAndPublishTask( void * pvParameters )
     {
         /* MQTT client is now connected to a broker.  Publish a message
          * every five seconds until a minute has elapsed. */
-        for( x = 0; x < xIterationsInAMinute; x++ )
+        for( xX = 0; xX < xIterationsInAMinute; xX++ )
         {
-            prvPublishNextMessage( x );
+            prvPublishNextMessage( xX );
 
             /* Five seconds delay between publishes. */
             vTaskDelay( xFiveSeconds );
@@ -481,6 +496,7 @@ static void prvMQTTConnectAndPublishTask( void * pvParameters )
 
     /* End the demo by deleting all created resources. */
     configPRINTF( ( "MQTT echo demo finished.\r\n" ) );
+    configPRINTF( ( "----Demo finished----\r\n" ) );
     vMessageBufferDelete( xEchoMessageBuffer );
     vTaskDelete( xEchoingTask );
     vTaskDelete( NULL ); /* Delete this task. */

@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS Crypto V1.0.1
+ * Amazon FreeRTOS Crypto V1.0.3
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -184,12 +184,12 @@ BaseType_t CRYPTO_SignatureVerificationStart( void ** ppvContext,
         if( cryptoHASH_ALGORITHM_SHA1 == pxCtx->xHashAlgorithm )
         {
             mbedtls_sha1_init( &pxCtx->xSHA1Context );
-            mbedtls_sha1_starts( &pxCtx->xSHA1Context );
+            ( void ) mbedtls_sha1_starts_ret( &pxCtx->xSHA1Context );
         }
         else
         {
             mbedtls_sha256_init( &pxCtx->xSHA256Context );
-            mbedtls_sha256_starts( &pxCtx->xSHA256Context, 0 );
+            ( void ) mbedtls_sha256_starts_ret( &pxCtx->xSHA256Context, 0 );
         }
     }
 
@@ -201,7 +201,7 @@ BaseType_t CRYPTO_SignatureVerificationStart( void ** ppvContext,
  * verification.
  */
 void CRYPTO_SignatureVerificationUpdate( void * pvContext,
-                                         uint8_t * pucData,
+                                         const uint8_t * pucData,
                                          size_t xDataLength )
 {
     SignatureVerificationStatePtr_t pxCtx = ( SignatureVerificationStatePtr_t ) pvContext; /*lint !e9087 Allow casting void* to other types. */
@@ -211,11 +211,11 @@ void CRYPTO_SignatureVerificationUpdate( void * pvContext,
      */
     if( cryptoHASH_ALGORITHM_SHA1 == pxCtx->xHashAlgorithm )
     {
-        mbedtls_sha1_update( &pxCtx->xSHA1Context, pucData, xDataLength );
+        ( void ) mbedtls_sha1_update_ret( &pxCtx->xSHA1Context, pucData, xDataLength );
     }
     else
     {
-        mbedtls_sha256_update( &pxCtx->xSHA256Context, pucData, xDataLength );
+        ( void ) mbedtls_sha256_update_ret( &pxCtx->xSHA256Context, pucData, xDataLength );
     }
 }
 
@@ -228,45 +228,57 @@ BaseType_t CRYPTO_SignatureVerificationFinal( void * pvContext,
                                               uint8_t * pucSignature,
                                               size_t xSignatureLength )
 {
-    BaseType_t xResult = pdTRUE;
-    SignatureVerificationStatePtr_t pxCtx =
-        ( SignatureVerificationStatePtr_t ) pvContext; /*lint !e9087 Allow casting void* to other types. */
-    uint8_t ucSHA1[ cryptoSHA1_DIGEST_BYTES ];
-    uint8_t ucSHA256[ cryptoSHA256_DIGEST_BYTES ];
-    uint8_t * pucHash = NULL;
-    size_t xHashLength = 0;
+    BaseType_t xResult = pdFALSE;
 
-    /*
-     * Finish the hash
-     */
-    if( cryptoHASH_ALGORITHM_SHA1 == pxCtx->xHashAlgorithm )
+    if( pvContext != NULL )
     {
-        mbedtls_sha1_finish( &pxCtx->xSHA1Context, ucSHA1 );
-        pucHash = ucSHA1;
-        xHashLength = cryptoSHA1_DIGEST_BYTES;
-    }
-    else
-    {
-        mbedtls_sha256_finish( &pxCtx->xSHA256Context, ucSHA256 );
-        pucHash = ucSHA256;
-        xHashLength = cryptoSHA256_DIGEST_BYTES;
-    }
+        SignatureVerificationStatePtr_t pxCtx = ( SignatureVerificationStatePtr_t ) pvContext; /*lint !e9087 Allow casting void* to other types. */
+        uint8_t ucSHA1or256[ cryptoSHA256_DIGEST_BYTES ];                                      /* Reserve enough space for the larger of SHA1 or SHA256 results. */
+        uint8_t * pucHash = NULL;
+        size_t xHashLength = 0;
 
-    /*
-     * Verify the signature
-     */
-    xResult = prvVerifySignature( pcSignerCertificate,
-                                  xSignerCertificateLength,
-                                  pxCtx->xHashAlgorithm,
-                                  pucHash,
-                                  xHashLength,
-                                  pucSignature,
-                                  xSignatureLength );
+        if( ( pcSignerCertificate != NULL ) &&
+            ( pucSignature != NULL ) &&
+            ( xSignerCertificateLength > 0UL ) &&
+            ( xSignatureLength > 0UL ) )
+        {
+            /*
+             * Finish the hash
+             */
+            if( cryptoHASH_ALGORITHM_SHA1 == pxCtx->xHashAlgorithm )
+            {
+                ( void ) mbedtls_sha1_finish_ret( &pxCtx->xSHA1Context, ucSHA1or256 );
+                pucHash = ucSHA1or256;
+                xHashLength = cryptoSHA1_DIGEST_BYTES;
+            }
+            else
+            {
+                ( void ) mbedtls_sha256_finish_ret( &pxCtx->xSHA256Context, ucSHA1or256 );
+                pucHash = ucSHA1or256;
+                xHashLength = cryptoSHA256_DIGEST_BYTES;
+            }
 
-    /*
-     * Clean-up
-     */
-    vPortFree( pxCtx );
+            /*
+             * Verify the signature
+             */
+            xResult = prvVerifySignature( pcSignerCertificate,
+                                          xSignerCertificateLength,
+                                          pxCtx->xHashAlgorithm,
+                                          pucHash,
+                                          xHashLength,
+                                          pucSignature,
+                                          xSignatureLength );
+        }
+        else
+        {
+            /* Allow function to be called with only the context pointer for cleanup after a failure. */
+        }
+
+        /*
+         * Clean-up
+         */
+        vPortFree( pxCtx );
+    }
 
     return xResult;
 }

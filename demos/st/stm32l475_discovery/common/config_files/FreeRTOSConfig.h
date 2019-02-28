@@ -80,7 +80,7 @@
 #define configUSE_TIMERS                             1
 #define configTIMER_TASK_PRIORITY                    ( configMAX_PRIORITIES - 2 )
 #define configTIMER_QUEUE_LENGTH                     10
-#define configTIMER_TASK_STACK_DEPTH                 ( configMINIMAL_STACK_SIZE * 4 )
+#define configTIMER_TASK_STACK_DEPTH                 ( configMINIMAL_STACK_SIZE * 6 )
 
 /* Set the following definitions to 1 to include the API function, or zero
  * to exclude the API function. */
@@ -140,7 +140,7 @@ void vLoggingPrintf( const char * pcFormat,
 
 /* Sets the length of the buffers into which logging messages are written - so
  * also defines the maximum length of each log message. */
-#define configLOGGING_MAX_MESSAGE_LENGTH            100
+#define configLOGGING_MAX_MESSAGE_LENGTH            160
 
 /* Set to 1 to prepend each log message with a message number, the task name,
  * and a time stamp. */
@@ -190,5 +190,8 @@ extern int iMainRand32( void );
 #define configECHO_SERVER_ADDR2       2
 #define configECHO_SERVER_ADDR3       6
 #define configTCP_ECHO_CLIENT_PORT    7
+
+/* The platform FreeRTOS is running on. */
+#define configPLATFORM_NAME    "STM32L475"
 
 #endif /* FREERTOS_CONFIG_H */

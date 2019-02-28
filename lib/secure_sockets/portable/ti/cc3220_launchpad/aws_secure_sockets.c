@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS Secure Sockets for CC3220SF-LAUNCHXL V1.0.2
+ * Amazon FreeRTOS Secure Sockets for CC3220SF-LAUNCHXL V1.0.5
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -38,31 +38,15 @@
 
 /* TI driver includes. */
 #include <ti/drivers/net/wifi/simplelink.h>
-#include "uart_term.h"
 
 /* Credentials includes. */
 #include "aws_clientcredential.h"
 #include "aws_default_root_certificates.h"
 
-/**
- * @brief Custom root CA.
- */
-#define securesocketsSECURE_FILE_NAME_CUSTOMROOTCA      "/certs/CustomRootCA.crt"
 
-/**
- * @brief Root CA.
- */
-#define securesocketsSECURE_FILE_NAME_ROOTCA            "/certs/RootCA.crt"
 
-/**
- * @brief Client certificate.
- */
-#define securesocketsSECURE_FILE_NAME_CLIENTCERT        "/certs/ClientCert.crt"
+#define SOCKETS_PRINT( X )               vLoggingPrintf X
 
-/**
- * @brief Client private key.
- */
-#define securesocketsSECURE_FILE_NAME_PRIVATEKEY        "/certs/PrivateKey.key"
 
 /**
  * @brief Maximum number of sockets.
@@ -385,8 +369,8 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
 
     if( sTIRetCode < 0 )
     {
-        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-        configPRINTF( ( "ERROR: %d Failed to select TLS method.\r\n", sTIRetCode ) );
+        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+        SOCKETS_PRINT( ( "ERROR: %d Failed to select TLS method.\r\n", sTIRetCode ) );
         lRetCode = SOCKETS_SOCKET_ERROR;
     }
 
@@ -404,8 +388,8 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
 
         if( sTIRetCode < 0 )
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Failed to set cipher suites.\r\n", sTIRetCode ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Failed to set cipher suites.\r\n", sTIRetCode ) );
             lRetCode = SOCKETS_SOCKET_ERROR;
         }
     }
@@ -421,8 +405,8 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
 
         if( sTIRetCode < 0 )
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Failed to disable root certificate catalog.\r\n", sTIRetCode ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Failed to disable root certificate catalog.\r\n", sTIRetCode ) );
             lRetCode = SOCKETS_SOCKET_ERROR;
         }
     }
@@ -435,13 +419,13 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
             sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
                                         SL_SOL_SOCKET,
                                         SL_SO_SECURE_FILES_CA_FILE_NAME,
-                                        securesocketsSECURE_FILE_NAME_ROOTCA,
-                                        ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_ROOTCA ) );
+                                        socketsconfigSECURE_FILE_NAME_ROOTCA,
+                                        ( SlSocklen_t ) strlen( socketsconfigSECURE_FILE_NAME_ROOTCA ) );
 
             if( sTIRetCode < 0 )
             {
-                /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                configPRINTF( ( "ERROR: %d Failed to set the root certificate.\r\n", sTIRetCode ) );
+                /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                SOCKETS_PRINT( ( "ERROR: %d Failed to set the root certificate.\r\n", sTIRetCode ) );
                 lRetCode = SOCKETS_SOCKET_ERROR;
             }
         }
@@ -453,13 +437,13 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
         sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
                                     SL_SOL_SOCKET,
                                     SL_SO_SECURE_FILES_CERTIFICATE_FILE_NAME,
-                                    securesocketsSECURE_FILE_NAME_CLIENTCERT,
-                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_CLIENTCERT ) );
+                                    socketsconfigSECURE_FILE_NAME_CLIENTCERT,
+                                    ( SlSocklen_t ) strlen( socketsconfigSECURE_FILE_NAME_CLIENTCERT ) );
 
         if( sTIRetCode < 0 )
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Failed to set the client certificate.\r\n", sTIRetCode ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Failed to set the client certificate.\r\n", sTIRetCode ) );
             lRetCode = SOCKETS_SOCKET_ERROR;
         }
     }
@@ -470,13 +454,13 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
         sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
                                     SL_SOL_SOCKET,
                                     SL_SO_SECURE_FILES_PRIVATE_KEY_FILE_NAME,
-                                    securesocketsSECURE_FILE_NAME_PRIVATEKEY,
-                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_PRIVATEKEY ) );
+                                    socketsconfigSECURE_FILE_NAME_PRIVATEKEY,
+                                    ( SlSocklen_t ) strlen( socketsconfigSECURE_FILE_NAME_PRIVATEKEY ) );
 
         if( sTIRetCode < 0 )
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Failed to set the private keys.\r\n", sTIRetCode ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Failed to set the private keys.\r\n", sTIRetCode ) );
             lRetCode = SOCKETS_SOCKET_ERROR;
         }
     }
@@ -495,8 +479,8 @@ static int32_t prvSetupSecurity( const SSocketContextPtr_t pxSocketContext )
 
         if( sTIRetCode < 0 )
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Failed to set the ALPN list.\r\n", sTIRetCode ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Failed to set the ALPN list.\r\n", sTIRetCode ) );
             lRetCode = SOCKETS_SOCKET_ERROR;
         }
     }
@@ -522,8 +506,8 @@ static int32_t prvWriteCertificate( const char * pcDeviceFileName,
 
     if( lFileHandle < 0 )
     {
-        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-        configPRINTF( ( "ERROR: %d Failed to open file %s.\r\n", lFileHandle, pcDeviceFileName ) );
+        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+        SOCKETS_PRINT( ( "ERROR: %d Failed to open file %s.\r\n", lFileHandle, pcDeviceFileName ) );
         lRetCode = SOCKETS_SOCKET_ERROR;
     }
 
@@ -537,8 +521,8 @@ static int32_t prvWriteCertificate( const char * pcDeviceFileName,
 
         if( lTIRetCode < 0 )
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Failed to write certificate to file %s.\r\n", lTIRetCode, pcDeviceFileName ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Failed to write certificate to file %s.\r\n", lTIRetCode, pcDeviceFileName ) );
             lRetCode = SOCKETS_SOCKET_ERROR;
         }
 
@@ -570,12 +554,12 @@ BaseType_t SOCKETS_Init( void )
         }
         else
         {
-            configPRINTF( ( "ERROR: SOCKETS_Init - Failed to create the GetHostByName mutex. \r\n" ) );
+            SOCKETS_PRINT( ( "ERROR: SOCKETS_Init - Failed to create the GetHostByName mutex. \r\n" ) );
         }
     }
     else
     {
-        configPRINTF( ( "ERROR: SOCKETS_Init - Failed to create the SocketInUse mutex.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: SOCKETS_Init - Failed to create the SocketInUse mutex.\r\n" ) );
         xResult = pdFAIL;
     }
 
@@ -662,7 +646,7 @@ Socket_t SOCKETS_Socket( int32_t lDomain,
         {
             /* If the TI Socket could not be created, return the socket
              * context back to the free socket pool. */
-            configPRINTF( ( "ERROR: Failed to create TI socket.\r\n" ) );
+            SOCKETS_PRINT( ( "ERROR: %d Failed to create TI socket.\r\n", pxSocketContext->sSocketDescriptor ) );
             prvReturnSocket( ulSocketNumber );
 
             /* Inform the user about the failure by returning
@@ -672,7 +656,7 @@ Socket_t SOCKETS_Socket( int32_t lDomain,
     }
     else
     {
-        configPRINTF( ( "ERROR: No more free sockets available.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: No more free sockets available.\r\n" ) );
     }
 
     return xCreatedSocket;
@@ -735,8 +719,8 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
             }
             else
             {
-                /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                configPRINTF( ( "ERROR: %d Socket failed to connect.\r\n", sTIRetCode ) );
+                /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                SOCKETS_PRINT( ( "ERROR: %d Socket failed to connect.\r\n", sTIRetCode ) );
                 lRetCode = SOCKETS_SOCKET_ERROR;
             }
 
@@ -776,8 +760,8 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
                 }
                 else
                 {
-                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                    configPRINTF( ( "ERROR: %d Failed to start TLS Handshake.\r\n", sTIRetCode ) );
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                    SOCKETS_PRINT( ( "ERROR: %d Failed to start TLS Handshake.\r\n", sTIRetCode ) );
                     lRetCode = SOCKETS_TLS_INIT_ERROR;
                 }
             }
@@ -785,7 +769,7 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
     }
     else
     {
-        configPRINTF( ( "ERROR: Invalid socket number in SOCKETS_Connect.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: Invalid socket number in SOCKETS_Connect.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
     }
 
@@ -825,8 +809,8 @@ int32_t SOCKETS_Recv( Socket_t xSocket,
                 }
                 else
                 {
-                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                    configPRINTF( ( "ERROR: %d Socket receive failed.\r\n", sTIRetCode ) );
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                    SOCKETS_PRINT( ( "ERROR: %d Socket receive failed.\r\n", sTIRetCode ) );
                     lRetCode = SOCKETS_SOCKET_ERROR;
                 }
             }
@@ -845,7 +829,7 @@ int32_t SOCKETS_Recv( Socket_t xSocket,
     }
     else
     {
-        configPRINTF( ( "ERROR: Invalid Socket number or NULL pvBuffer in SOCKETS_Recv.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: Invalid Socket number or NULL pvBuffer in SOCKETS_Recv.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
     }
 
@@ -885,8 +869,8 @@ int32_t SOCKETS_Send( Socket_t xSocket,
                 }
                 else
                 {
-                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                    configPRINTF( ( "ERROR: %d Socket send failed.\r\n", sTIRetCode ) );
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                    SOCKETS_PRINT( ( "ERROR: %d Socket send failed.\r\n", sTIRetCode ) );
                     /* For any other error, return SOCKETS_SOCKET_ERROR. */
                     lRetCode = SOCKETS_SOCKET_ERROR;
                 }
@@ -906,7 +890,7 @@ int32_t SOCKETS_Send( Socket_t xSocket,
     }
     else
     {
-        configPRINTF( ( "ERROR: Invalid Socket number or NULL pvBuffer in SOCKETS_Send.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: Invalid Socket number or NULL pvBuffer in SOCKETS_Send.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
     }
 
@@ -971,7 +955,7 @@ int32_t SOCKETS_Shutdown( Socket_t xSocket,
     }
     else
     {
-        configPRINTF( ( "ERROR: Invalid socket number in SOCKETS_Shutdown.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: Invalid socket number in SOCKETS_Shutdown.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
     }
 
@@ -1017,13 +1001,13 @@ int32_t SOCKETS_Close( Socket_t xSocket )
         }
         else
         {
-            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-            configPRINTF( ( "ERROR: %d Socket close failed.\r\n", sTIRetCode ) );
+            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+            SOCKETS_PRINT( ( "ERROR: %d Socket close failed.\r\n", sTIRetCode ) );
         }
     }
     else
     {
-        configPRINTF( ( "ERROR: Invalid socket number in SOCKETS_Close.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: Invalid socket number in SOCKETS_Close.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
     }
 
@@ -1074,14 +1058,14 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                     }
                     else
                     {
-                        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                        configPRINTF( ( "ERROR: %d SockOpt SNI failed.\r\n", sTIRetCode ) );
+                        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                        SOCKETS_PRINT( ( "ERROR: %d SockOpt SNI failed.\r\n", sTIRetCode ) );
                     }
                 }
                 else
                 {
                     lRetCode = SOCKETS_SOCKET_ERROR;
-                    configPRINTF( ( "ERROR: SNI must be set before connection is established.\r\n" ) );
+                    SOCKETS_PRINT( ( "ERROR: SNI must be set before connection is established.\r\n" ) );
                 }
 
                 break;
@@ -1091,7 +1075,7 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                 if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) == 0 )
                 {
                     /* Write the certificate to the file system. */
-                    lRetCode = prvWriteCertificate( securesocketsSECURE_FILE_NAME_CUSTOMROOTCA,
+                    lRetCode = prvWriteCertificate( socketsconfigSECURE_FILE_NAME_CUSTOMROOTCA,
                                                     pvOptionValue,
                                                     xOptionLength - 1U );
 
@@ -1102,8 +1086,8 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                         sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
                                                     SL_SOL_SOCKET,
                                                     SL_SO_SECURE_FILES_CA_FILE_NAME,
-                                                    securesocketsSECURE_FILE_NAME_CUSTOMROOTCA,
-                                                    ( SlSocklen_t ) strlen( securesocketsSECURE_FILE_NAME_CUSTOMROOTCA ) );
+                                                    socketsconfigSECURE_FILE_NAME_CUSTOMROOTCA,
+                                                    ( SlSocklen_t ) strlen( socketsconfigSECURE_FILE_NAME_CUSTOMROOTCA ) );
 
                         if( sTIRetCode >= 0 )
                         {
@@ -1112,8 +1096,8 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                         }
                         else
                         {
-                            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                            configPRINTF( ( "ERROR: %d Failed to set the custom root certificate.\r\n", sTIRetCode ) );
+                            /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                            SOCKETS_PRINT( ( "ERROR: %d Failed to set the custom root certificate.\r\n", sTIRetCode ) );
                             lRetCode = SOCKETS_SOCKET_ERROR;
                         }
                     }
@@ -1121,7 +1105,7 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                 else
                 {
                     lRetCode = SOCKETS_SOCKET_ERROR;
-                    configPRINTF( ( "ERROR: Secure trusted cert must be set before connection is established.\r\n" ) );
+                    SOCKETS_PRINT( ( "ERROR: Secure trusted cert must be set before connection is established.\r\n" ) );
                 }
 
                 break;
@@ -1154,7 +1138,7 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                 else
                 {
                     lRetCode = SOCKETS_SOCKET_ERROR;
-                    configPRINTF( ( "ERROR: Require TLS must be set before connection is established.\r\n" ) );
+                    SOCKETS_PRINT( ( "ERROR: Require TLS must be set before connection is established.\r\n" ) );
                 }
 
                 break;
@@ -1187,8 +1171,8 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                 }
                 else
                 {
-                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                    configPRINTF( ( "ERROR: %d SockOpt RCVTIMEO failed.\r\n", sTIRetCode ) );
+                    /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                    SOCKETS_PRINT( ( "ERROR: %d SockOpt RCVTIMEO failed.\r\n", sTIRetCode ) );
                 }
 
                 break;
@@ -1230,14 +1214,14 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                     }
                     else
                     {
-                        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h */
-                        configPRINTF( ( "ERROR: %d SockOpt NONBLOCK failed.\r\n", sTIRetCode ) );
+                        /* See \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h */
+                        SOCKETS_PRINT( ( "ERROR: %d SockOpt NONBLOCK failed.\r\n", sTIRetCode ) );
                     }
                 }
                 else
                 {
                     lRetCode = SOCKETS_SOCKET_ERROR;
-                    configPRINTF( ( "ERROR: NONBLOCKING socket option must be called after connect. Nonblocking connect is not supported.\r\n" ) );
+                    SOCKETS_PRINT( ( "ERROR: NONBLOCKING socket option must be called after connect. Nonblocking connect is not supported.\r\n" ) );
                 }
 
                 break;
@@ -1250,7 +1234,7 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
     }
     else
     {
-        configPRINTF( ( "ERROR: SOCKETS_Connect - Invalid Socket number.\r\n" ) );
+        SOCKETS_PRINT( ( "ERROR: SOCKETS_Connect - Invalid Socket number.\r\n" ) );
         lRetCode = SOCKETS_EINVAL;
     }
 
@@ -1296,7 +1280,7 @@ uint32_t SOCKETS_GetHostByName( const char * pcHostName )
  * task.
  *
  * @note SimpleLink error codes can be found in
- * \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v1_40_01_00\source\ti\drivers\net\wifi\errors.h
+ * \lib\third_party\mcu_vendor\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\errors.h
  *
  * @param[in] pSlSockEvent Pointer to Socket Event Info.
  */
@@ -1315,12 +1299,12 @@ void SimpleLinkSockEventHandler( SlSockEvent_t * pSlSockEvent )
                 case SL_ERROR_BSD_ECLOSE: /*lint !e9034 switch on a _i16, but SL_ERROR* defines are _i32.  Neither are defined in files controlled by Amazon FreeRTOS. */
 
                     /* TODO: Should this call sockets close? */
-                    configPRINTF( ( "[SimpleLinkSockEventHandler ERROR]: Close socket (%d) operation failed to transmit all queued packets.\r\n",
+                    SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler ERROR]: Close socket (%d) operation failed to transmit all queued packets.\r\n",
                                     pSlSockEvent->SocketAsyncEvent.SockTxFailData.Sd ) );
                     break;
 
                 default:
-                    configPRINTF( ( "[SimpleLinkSockEventHandler ERROR]: TX Failed - socket %d, reason (%d).\r\n",
+                    SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler ERROR]: TX Failed - socket %d, reason (%d).\r\n",
                                     pSlSockEvent->SocketAsyncEvent.SockTxFailData.Sd,
                                     pSlSockEvent->SocketAsyncEvent.SockTxFailData.Status ) );
                     break;
@@ -1350,14 +1334,14 @@ void SimpleLinkSockEventHandler( SlSockEvent_t * pSlSockEvent )
                     }
                     else
                     {
-                        configPRINTF( ( "[SimpleLinkSockEventHandler ERROR]: Unexpected TLS handshake event.\r\n" ) );
+                        SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler ERROR]: Unexpected TLS handshake event.\r\n" ) );
                     }
 
                     break;
 
                 case SL_SSL_NOTIFICATION_HANDSHAKE_FAILED:
 
-                    configPRINTF( ( "[SimpleLinkSockEventHandler ERROR]: Handshake Failed - socket %d, reason: %d.\r\n",
+                    SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler ERROR]: Handshake Failed - socket %d, reason: %d.\r\n",
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Sd,
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Val ) );
 
@@ -1377,7 +1361,7 @@ void SimpleLinkSockEventHandler( SlSockEvent_t * pSlSockEvent )
                     }
                     else
                     {
-                        configPRINTF( ( "[SimpleLinkSockEventHandler EVENT]: Unexpected TLS handshake event.\r\n" ) );
+                        SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler EVENT]: Unexpected TLS handshake event.\r\n" ) );
                     }
 
                     break;
@@ -1388,13 +1372,13 @@ void SimpleLinkSockEventHandler( SlSockEvent_t * pSlSockEvent )
                      * SL_SSL_NOTIFICATION_HANDSHAKE_FAILED is also received whenever
                      * SL_SSL_NOTIFICATION_WRONG_ROOT_CA is received and we unblock the waiting
                      * task upon receiving SL_SSL_NOTIFICATION_WRONG_ROOT_CA. */
-                    configPRINTF( ( "[SimpleLinkSockEventHandler ERROR]: Root CA in file system did not sign the chain.\r\n" ) );
+                    SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler ERROR]: Root CA in file system did not sign the chain.\r\n" ) );
 
                     break;
 
                 default:
 
-                    configPRINTF( ( "[SimpleLinkSockEventHandler EVENT]: Unexpected Event: %d, Socket: %d Reason: %d.\r\n",
+                    SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler EVENT]: Unexpected Event: %d, Socket: %d Reason: %d.\r\n",
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Type,
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Sd,
                                     pSlSockEvent->SocketAsyncEvent.SockAsyncData.Val ) );
@@ -1406,7 +1390,7 @@ void SimpleLinkSockEventHandler( SlSockEvent_t * pSlSockEvent )
 
         default:
 
-            configPRINTF( ( "[SimpleLinkSockEventHandler EVENT] - Unexpected Event [%x0x].\r\n", pSlSockEvent->Event ) );
+            SOCKETS_PRINT( ( "[SimpleLinkSockEventHandler EVENT] - Unexpected Event [%x0x].\r\n", pSlSockEvent->Event ) );
 
             break;
     }

@@ -40,7 +40,7 @@
 * stack in this demo.  Constants specific to FreeRTOS+TCP itself (rather than
 * the demo) are contained in FreeRTOSIPConfig.h.
 *----------------------------------------------------------*/
-#define configENABLE_BACKWARD_COMPATIBILITY        0
+#define configENABLE_BACKWARD_COMPATIBILITY        1
 #define configUSE_PREEMPTION                       1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #define configMAX_PRIORITIES                       ( 7 )
@@ -161,7 +161,7 @@ extern void vLoggingPrintf( const char * pcFormat,
  * results in the wired network being used, while setting
  * configNETWORK_INTERFACE_TO_USE to 2 results in the wireless network being
  * used. */
-#define configNETWORK_INTERFACE_TO_USE       2L
+#define configNETWORK_INTERFACE_TO_USE       ( 0L )
 
 /* The address of an echo server that will be used by the two demo echo client
  * tasks:
@@ -223,7 +223,8 @@ extern void vLoggingPrintf( const char * pcFormat,
 extern uint32_t ulRand();
 #define configRAND32()    ulRand()
 
-
+/* The platform that FreeRTOS is running on. */
+#define configPLATFORM_NAME    "WinSim"
 
 /* Header required for the tracealyzer recorder library. */
 #include "trcRecorder.h"

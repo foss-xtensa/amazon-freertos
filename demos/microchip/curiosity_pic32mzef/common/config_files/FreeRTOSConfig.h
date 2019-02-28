@@ -69,7 +69,7 @@
 #define configUSE_QUEUE_SETS                       0
 #define configUSE_TIME_SLICING                     0
 #define configUSE_NEWLIB_REENTRANT                 0
-#define configENABLE_BACKWARD_COMPATIBILITY        0
+#define configENABLE_BACKWARD_COMPATIBILITY        1
 #define configUSE_TASK_FPU_SUPPORT                 0
 
 /* Hook function related definitions. */
@@ -150,7 +150,7 @@
 
 /* Sets the length of the buffers into which logging messages are written - so
  * also defines the maximum length of each log message. */
-    #define configLOGGING_MAX_MESSAGE_LENGTH            100
+    #define configLOGGING_MAX_MESSAGE_LENGTH            128
 
 /* Set to 1 to prepend each log message with a message number, the task name,
  * and a time stamp. */
@@ -209,11 +209,11 @@
  * This address setting will override the factory programmed address.
  * Use all 0's to use the factory programmed address */
 #define configMAC_ADDR0           0x00
-#define configMAC_ADDR1           0x11
-#define configMAC_ADDR2           0x22
-#define configMAC_ADDR3           0x33
-#define configMAC_ADDR4           0x44
-#define configMAC_ADDR5           0x21
+#define configMAC_ADDR1           0x00
+#define configMAC_ADDR2           0x00
+#define configMAC_ADDR3           0x00
+#define configMAC_ADDR4           0x00
+#define configMAC_ADDR5           0x00
 
 /* Default IP address configuration.  Used in ipconfigUSE_DHCP is set to 0, or
  * ipconfigUSE_DHCP is set to 1 but a DNS server cannot be contacted. */
@@ -255,5 +255,7 @@
     #define configRAND32()    ulRand()
 #endif /* defined(__LANGUAGE_C__) */
 
+/* The platform FreeRTOS is running on. */
+#define configPLATFORM_NAME    "MicrochipPIC32MZEF"
 
 #endif /* FREERTOS_CONFIG_H */

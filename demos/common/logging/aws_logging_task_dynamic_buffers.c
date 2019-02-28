@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS V1.2.1
+ * Amazon FreeRTOS V1.4.7
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -54,7 +54,7 @@
 #endif
 
 /* A block time of 0 just means don't block. */
-#define loggingDONT_BLOCK 0
+#define loggingDONT_BLOCK    0
 
 /*-----------------------------------------------------------*/
 
@@ -82,9 +82,11 @@ static QueueHandle_t xQueue = NULL;
 
 /*-----------------------------------------------------------*/
 
-BaseType_t xLoggingTaskInitialize( uint16_t usStackSize, UBaseType_t uxPriority, UBaseType_t uxQueueLength )
+BaseType_t xLoggingTaskInitialize( uint16_t usStackSize,
+                                   UBaseType_t uxPriority,
+                                   UBaseType_t uxQueueLength )
 {
-BaseType_t xReturn = pdFAIL;
+    BaseType_t xReturn = pdFAIL;
 
     /* Ensure the logging task has not been created already. */
     if( xQueue == NULL )
@@ -110,11 +112,11 @@ BaseType_t xReturn = pdFAIL;
 }
 /*-----------------------------------------------------------*/
 
-static void prvLoggingTask( void *pvParameters )
+static void prvLoggingTask( void * pvParameters )
 {
-char *pcReceivedString;
+    char * pcReceivedString = NULL;
 
-    for( ;; )
+    for( ; ; )
     {
         /* Block to wait for the next string to print. */
         if( xQueueReceive( xQueue, &pcReceivedString, portMAX_DELAY ) == pdPASS )
@@ -135,15 +137,16 @@ char *pcReceivedString;
  * print statement.
  *
  */
-void vLoggingPrintf( const char *pcFormat, ... )
+void vLoggingPrintf( const char * pcFormat,
+                     ... )
 {
-size_t xLength;
-int32_t xLength2;
-va_list args;
-char *pcPrintString;
+    size_t xLength = 0;
+    int32_t xLength2 = 0;
+    va_list args;
+    char * pcPrintString = NULL;
 
     /* The queue is created by xLoggingTaskInitialize().  Check
-    xLoggingTaskInitialize() has been called. */
+     * xLoggingTaskInitialize() has been called. */
     configASSERT( xQueue );
 
     /* Allocate a buffer to hold the log message. */
@@ -156,51 +159,69 @@ char *pcPrintString;
 
         if( strcmp( pcFormat, "\n" ) != 0 )
         {
-            #if( configLOGGING_INCLUDE_TIME_AND_TASK_NAME == 1 )
-            {
-                const char *pcTaskName;
-                const char *pcNoTask = "None";
-                static BaseType_t xMessageNumber = 0;
-
-                /* Add a time stamp and the name of the calling task to the
-                start of the log. */
-                if( xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED )
+            #if ( configLOGGING_INCLUDE_TIME_AND_TASK_NAME == 1 )
                 {
-                    pcTaskName = pcTaskGetName( NULL );
-                }
-                else
-                {
-                    pcTaskName = pcNoTask;
-                }
+                    const char * pcTaskName;
+                    const char * pcNoTask = "None";
+                    static BaseType_t xMessageNumber = 0;
 
-                xLength = snprintf( pcPrintString, configLOGGING_MAX_MESSAGE_LENGTH, "%lu %lu [%s] ",
-                    xMessageNumber++,
-                    ( unsigned long ) xTaskGetTickCount(),
-                    pcTaskName );
-            }
-            #else
-            {
-                xLength = 0;
-            }
-            #endif
+                    /* Add a time stamp and the name of the calling task to the
+                     * start of the log. */
+                    if( xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED )
+                    {
+                        pcTaskName = pcTaskGetName( NULL );
+                    }
+                    else
+                    {
+                        pcTaskName = pcNoTask;
+                    }
+
+                    xLength = snprintf( pcPrintString, configLOGGING_MAX_MESSAGE_LENGTH, "%lu %lu [%s] ",
+                                        xMessageNumber++,
+                                        ( unsigned long ) xTaskGetTickCount(),
+                                        pcTaskName );
+                }
+            #else /* if ( configLOGGING_INCLUDE_TIME_AND_TASK_NAME == 1 ) */
+                {
+                    xLength = 0;
+                }
+            #endif /* if ( configLOGGING_INCLUDE_TIME_AND_TASK_NAME == 1 ) */
         }
 
         xLength2 = vsnprintf( pcPrintString + xLength, configLOGGING_MAX_MESSAGE_LENGTH - xLength, pcFormat, args );
 
-        if( xLength2 <  0 )
+        if( xLength2 < 0 )
         {
-            /* Clean up as vsnprintf() failed. */
-            xLength2 = sizeof( pcPrintString ) - 1 - xLength;
-            pcPrintString[ sizeof( pcPrintString ) - 1 ] = '\0';
+            /* vsnprintf() failed. Restore the terminating NULL
+             * character of the first part. Note that the first
+             * part of the buffer may be empty if the value of
+             * configLOGGING_INCLUDE_TIME_AND_TASK_NAME is not
+             * 1 and as a result, the whole buffer may be empty.
+             * That's the reason we have a check for xLength > 0
+             * before sending the buffer to the logging task.
+             */
+            xLength2 = 0;
+            pcPrintString[ xLength ] = '\0';
         }
 
         xLength += ( size_t ) xLength2;
         va_end( args );
 
-        /* Send the string to the logging task for IO. */
-        if( xQueueSend( xQueue, &pcPrintString, loggingDONT_BLOCK ) != pdPASS )
+        /* Only send the buffer to the logging task if it is
+         * not empty. */
+        if( xLength > 0 )
         {
-            /* The buffer was not sent so must be freed again. */
+            /* Send the string to the logging task for IO. */
+            if( xQueueSend( xQueue, &pcPrintString, loggingDONT_BLOCK ) != pdPASS )
+            {
+                /* The buffer was not sent so must be freed again. */
+                vPortFree( ( void * ) pcPrintString );
+            }
+        }
+        else
+        {
+            /* The buffer was not sent, so it must be
+             * freed. */
             vPortFree( ( void * ) pcPrintString );
         }
     }
@@ -209,8 +230,8 @@ char *pcPrintString;
 
 void vLoggingPrint( const char * pcMessage )
 {
-    char * pcPrintString;
-    size_t xLength;
+    char * pcPrintString = NULL;
+    size_t xLength = 0;
 
     /* The queue is created by xLoggingTaskInitialize().  Check
      * xLoggingTaskInitialize() has been called. */

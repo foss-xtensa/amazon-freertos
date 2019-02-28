@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS V1.2.1
+ * Amazon FreeRTOS V1.4.7
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -36,7 +36,7 @@
  *
  * This gives the user flexibility of registering a callback per topic.
  */
-#define mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT
+#define mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT            ( 1 )
 
 /**
  * @brief Maximum length of the topic which can be stored in subscription

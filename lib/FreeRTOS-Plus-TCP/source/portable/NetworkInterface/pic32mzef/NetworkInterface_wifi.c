@@ -29,6 +29,7 @@
 *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 *  SOFTWARE
 *******************************************************************************/
+#ifndef PIC32_USE_ETHERNET
 #include <sys/kmem.h>
 
 #include "FreeRTOS.h"
@@ -57,7 +58,7 @@
 
 #include "NetworkConfig.h"
 
-#ifndef PIC32_USE_ETHERNET
+
     #include "aws_wifi.h"
 
     /* local definitions and data */
@@ -129,7 +130,7 @@
                                 uint8_t const * const frame )
     {
         bool pktSuccess, pktLost;
-        NetworkBufferDescriptor_t * pxNetworkBuffer;
+        NetworkBufferDescriptor_t * pxNetworkBuffer = NULL;
         IPStackEvent_t xRxEvent = { eNetworkRxEvent, NULL };
 
         pktSuccess = pktLost = false;
@@ -144,17 +145,22 @@
             /* get the network descriptor (no data buffer) to hold this packet */
             pxNetworkBuffer = pxGetNetworkBufferWithDescriptor( len, 0 );
 
-            if( pxNetworkBuffer == 0 )
+            if( pxNetworkBuffer == NULL )
             {
                 pktLost = true;
                 break;
             }
 
+            /* Set the actual packet length, in case a larger buffer was 
+            returned. */
+            pxNetworkBuffer->xDataLength = len;
+            
+            /* Copy the packet. */
             memcpy( pxNetworkBuffer->pucEthernetBuffer, frame, len );
 
+            /* Send the data to the TCP/IP stack. */
             xRxEvent.pvData = ( void * ) pxNetworkBuffer;
 
-            /* Send the data to the TCP/IP stack */
             if( xSendEventStructToIPTask( &xRxEvent, 0 ) == pdFALSE )
             { /* failed */
                 pktLost = true;
@@ -170,7 +176,7 @@
 
         if( !pktSuccess )
         { /* smth went wrong; nothing sent to the */
-            if( pxNetworkBuffer != 0 )
+            if( pxNetworkBuffer != NULL )
             {
                 pxNetworkBuffer->pucEthernetBuffer = 0;
                 vReleaseNetworkBufferAndDescriptor( pxNetworkBuffer );
