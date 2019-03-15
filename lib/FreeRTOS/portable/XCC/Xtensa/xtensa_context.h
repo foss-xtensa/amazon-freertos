@@ -58,17 +58,17 @@
 */
 #if defined(_ASMLANGUAGE) || defined(__ASSEMBLER__)
 
-#define STRUCT_BEGIN            .pushsection .text; .struct 0
-#define STRUCT_FIELD(ctype,size,asname,name)    asname: .space  size
-#define STRUCT_AFIELD(ctype,size,asname,name,n) asname: .space  (size)*(n)
-#define STRUCT_END(sname)       sname##Size:; .popsection
+#define XSTRUCT_BEGIN            .pushsection .text; .struct 0
+#define XSTRUCT_FIELD(ctype,size,asname,name)    asname: .space  size
+#define XSTRUCT_AFIELD(ctype,size,asname,name,n) asname: .space  (size)*(n)
+#define XSTRUCT_END(sname)       sname##Size:; .popsection
 
 #else
 
-#define STRUCT_BEGIN            typedef struct {
-#define STRUCT_FIELD(ctype,size,asname,name)    ctype   name;
-#define STRUCT_AFIELD(ctype,size,asname,name,n) ctype   name[n];
-#define STRUCT_END(sname)       } sname;
+#define XSTRUCT_BEGIN            typedef struct {
+#define XSTRUCT_FIELD(ctype,size,asname,name)    ctype   name;
+#define XSTRUCT_AFIELD(ctype,size,asname,name,n) ctype   name[n];
+#define XSTRUCT_END(sname)       } sname;
 
 #endif //_ASMLANGUAGE || __ASSEMBLER__
 
@@ -92,49 +92,49 @@
 -------------------------------------------------------------------------------
 */
 
-STRUCT_BEGIN
-STRUCT_FIELD (long, 4, XT_STK_EXIT,     exit) /* exit point for dispatch */
-STRUCT_FIELD (long, 4, XT_STK_PC,       pc)   /* return PC */
-STRUCT_FIELD (long, 4, XT_STK_PS,       ps)   /* return PS */
-STRUCT_FIELD (long, 4, XT_STK_A0,       a0)
-STRUCT_FIELD (long, 4, XT_STK_A1,       a1)   /* stack pointer before interrupt */
-STRUCT_FIELD (long, 4, XT_STK_A2,       a2)
-STRUCT_FIELD (long, 4, XT_STK_A3,       a3)
-STRUCT_FIELD (long, 4, XT_STK_A4,       a4)
-STRUCT_FIELD (long, 4, XT_STK_A5,       a5)
-STRUCT_FIELD (long, 4, XT_STK_A6,       a6)
-STRUCT_FIELD (long, 4, XT_STK_A7,       a7)
-STRUCT_FIELD (long, 4, XT_STK_A8,       a8)
-STRUCT_FIELD (long, 4, XT_STK_A9,       a9)
-STRUCT_FIELD (long, 4, XT_STK_A10,      a10)
-STRUCT_FIELD (long, 4, XT_STK_A11,      a11)
-STRUCT_FIELD (long, 4, XT_STK_A12,      a12)
-STRUCT_FIELD (long, 4, XT_STK_A13,      a13)
-STRUCT_FIELD (long, 4, XT_STK_A14,      a14)
-STRUCT_FIELD (long, 4, XT_STK_A15,      a15)
-STRUCT_FIELD (long, 4, XT_STK_SAR,      sar)
-STRUCT_FIELD (long, 4, XT_STK_EXCCAUSE, exccause)
-STRUCT_FIELD (long, 4, XT_STK_EXCVADDR, excvaddr)
+XSTRUCT_BEGIN
+XSTRUCT_FIELD (long, 4, XT_STK_EXIT,     exit) /* exit point for dispatch */
+XSTRUCT_FIELD (long, 4, XT_STK_PC,       pc)   /* return PC */
+XSTRUCT_FIELD (long, 4, XT_STK_PS,       ps)   /* return PS */
+XSTRUCT_FIELD (long, 4, XT_STK_A0,       a0)
+XSTRUCT_FIELD (long, 4, XT_STK_A1,       a1)   /* stack pointer before interrupt */
+XSTRUCT_FIELD (long, 4, XT_STK_A2,       a2)
+XSTRUCT_FIELD (long, 4, XT_STK_A3,       a3)
+XSTRUCT_FIELD (long, 4, XT_STK_A4,       a4)
+XSTRUCT_FIELD (long, 4, XT_STK_A5,       a5)
+XSTRUCT_FIELD (long, 4, XT_STK_A6,       a6)
+XSTRUCT_FIELD (long, 4, XT_STK_A7,       a7)
+XSTRUCT_FIELD (long, 4, XT_STK_A8,       a8)
+XSTRUCT_FIELD (long, 4, XT_STK_A9,       a9)
+XSTRUCT_FIELD (long, 4, XT_STK_A10,      a10)
+XSTRUCT_FIELD (long, 4, XT_STK_A11,      a11)
+XSTRUCT_FIELD (long, 4, XT_STK_A12,      a12)
+XSTRUCT_FIELD (long, 4, XT_STK_A13,      a13)
+XSTRUCT_FIELD (long, 4, XT_STK_A14,      a14)
+XSTRUCT_FIELD (long, 4, XT_STK_A15,      a15)
+XSTRUCT_FIELD (long, 4, XT_STK_SAR,      sar)
+XSTRUCT_FIELD (long, 4, XT_STK_EXCCAUSE, exccause)
+XSTRUCT_FIELD (long, 4, XT_STK_EXCVADDR, excvaddr)
 #if XCHAL_HAVE_LOOPS
-STRUCT_FIELD (long, 4, XT_STK_LBEG,   lbeg)
-STRUCT_FIELD (long, 4, XT_STK_LEND,   lend)
-STRUCT_FIELD (long, 4, XT_STK_LCOUNT, lcount)
+XSTRUCT_FIELD (long, 4, XT_STK_LBEG,   lbeg)
+XSTRUCT_FIELD (long, 4, XT_STK_LEND,   lend)
+XSTRUCT_FIELD (long, 4, XT_STK_LCOUNT, lcount)
 #endif
 #ifndef __XTENSA_CALL0_ABI__
 /* Temporary space for saving stuff during window spill */
-STRUCT_FIELD (long, 4, XT_STK_TMP0,   tmp0)
-STRUCT_FIELD (long, 4, XT_STK_TMP1,   tmp1)
-STRUCT_FIELD (long, 4, XT_STK_TMP2,   tmp2)
+XSTRUCT_FIELD (long, 4, XT_STK_TMP0,   tmp0)
+XSTRUCT_FIELD (long, 4, XT_STK_TMP1,   tmp1)
+XSTRUCT_FIELD (long, 4, XT_STK_TMP2,   tmp2)
 #endif
 #ifdef XT_USE_SWPRI
 /* Storage for virtual priority mask */
-STRUCT_FIELD (long, 4, XT_STK_VPRI,   vpri)
+XSTRUCT_FIELD (long, 4, XT_STK_VPRI,   vpri)
 #endif
 #ifdef XT_USE_OVLY
 /* Storage for overlay state */
-STRUCT_FIELD (long, 4, XT_STK_OVLY,   ovly)
+XSTRUCT_FIELD (long, 4, XT_STK_OVLY,   ovly)
 #endif
-STRUCT_END(XtExcFrame)
+XSTRUCT_END(XtExcFrame)
 
 #if defined(_ASMLANGUAGE) || defined(__ASSEMBLER__)
 #define XT_STK_NEXT1      XtExcFrameSize
@@ -191,27 +191,27 @@ STRUCT_END(XtExcFrame)
 -------------------------------------------------------------------------------
 */
 
-STRUCT_BEGIN
+XSTRUCT_BEGIN
 #ifdef __XTENSA_CALL0_ABI__
-STRUCT_FIELD (long, 4, XT_SOL_EXIT, exit)
-STRUCT_FIELD (long, 4, XT_SOL_PC,   pc)
-STRUCT_FIELD (long, 4, XT_SOL_PS,   ps)
-STRUCT_FIELD (long, 4, XT_SOL_NEXT, next)
-STRUCT_FIELD (long, 4, XT_SOL_A12,  a12)    /* should be on 16-byte alignment */
-STRUCT_FIELD (long, 4, XT_SOL_A13,  a13)
-STRUCT_FIELD (long, 4, XT_SOL_A14,  a14)
-STRUCT_FIELD (long, 4, XT_SOL_A15,  a15)
+XSTRUCT_FIELD (long, 4, XT_SOL_EXIT, exit)
+XSTRUCT_FIELD (long, 4, XT_SOL_PC,   pc)
+XSTRUCT_FIELD (long, 4, XT_SOL_PS,   ps)
+XSTRUCT_FIELD (long, 4, XT_SOL_NEXT, next)
+XSTRUCT_FIELD (long, 4, XT_SOL_A12,  a12)    /* should be on 16-byte alignment */
+XSTRUCT_FIELD (long, 4, XT_SOL_A13,  a13)
+XSTRUCT_FIELD (long, 4, XT_SOL_A14,  a14)
+XSTRUCT_FIELD (long, 4, XT_SOL_A15,  a15)
 #else
-STRUCT_FIELD (long, 4, XT_SOL_EXIT, exit)
-STRUCT_FIELD (long, 4, XT_SOL_PC,   pc)
-STRUCT_FIELD (long, 4, XT_SOL_PS,   ps)
-STRUCT_FIELD (long, 4, XT_SOL_NEXT, next)
-STRUCT_FIELD (long, 4, XT_SOL_A0,   a0)    /* should be on 16-byte alignment */
-STRUCT_FIELD (long, 4, XT_SOL_A1,   a1)
-STRUCT_FIELD (long, 4, XT_SOL_A2,   a2)
-STRUCT_FIELD (long, 4, XT_SOL_A3,   a3)
+XSTRUCT_FIELD (long, 4, XT_SOL_EXIT, exit)
+XSTRUCT_FIELD (long, 4, XT_SOL_PC,   pc)
+XSTRUCT_FIELD (long, 4, XT_SOL_PS,   ps)
+XSTRUCT_FIELD (long, 4, XT_SOL_NEXT, next)
+XSTRUCT_FIELD (long, 4, XT_SOL_A0,   a0)    /* should be on 16-byte alignment */
+XSTRUCT_FIELD (long, 4, XT_SOL_A1,   a1)
+XSTRUCT_FIELD (long, 4, XT_SOL_A2,   a2)
+XSTRUCT_FIELD (long, 4, XT_SOL_A3,   a3)
 #endif
-STRUCT_END(XtSolFrame)
+XSTRUCT_END(XtSolFrame)
 
 /* Size of solicited stack frame */
 #define XT_SOL_FRMSZ            ALIGNUP(0x10, XtSolFrameSize)
