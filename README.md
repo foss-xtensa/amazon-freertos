@@ -12,4 +12,3 @@ For more information on using the Xtensa port, refer to the files:
 Building and running the Xtensa port and included examples requires the Xtensa toolchain and instruction set simulator. The open source GCC-based toolchain cannot currently be used for this.
 
 The examples are set up to run on the simulator. To run them on your target board, some changes may be required. refer to the readmes for details.
-
