@@ -24,10 +24,11 @@
 
 #include "xtensa_rtos.h"
 
-#define TOPOFSTACK_OFFS                 0x00    /* StackType_t *pxTopOfStack */
-#define CP_TOPOFSTACK_OFFS              0x04    /* xMPU_SETTINGS.coproc_area */
+#define MPUSETTINGS_SIZE        0x00                        /* Size of MPU settings struct */
+#define TOS_OFFSET              0x00                        /* pxTCB->pxTopOfStack offset  */
+#define EOS_OFFSET              (0x3C + MPUSETTINGS_SIZE)   /* pxTCB->pxEndOfStack offset  */
 
-.extern pxCurrentTCB
+    .extern pxCurrentTCB
 
 
 /*
@@ -115,7 +116,7 @@ _frxt_int_enter:
     movi    a2,  pxCurrentTCB
     l32i    a2,  a2, 0                  /* a2 = current TCB                */
     beqz    a2,  1f
-    s32i    a1,  a2, TOPOFSTACK_OFFS    /* pxCurrentTCB->pxTopOfStack = SP */
+    s32i    a1,  a2, TOS_OFFSET         /* pxCurrentTCB->pxTopOfStack = SP */
     movi    a1,  port_IntStackTop       /* a1 = top of intr stack          */
 
 .Lnested:
@@ -156,7 +157,7 @@ _frxt_int_exit:
     movi    a2,  pxCurrentTCB
     l32i    a2,  a2, 0                  /* a2 = current TCB                */
     beqz    a2,  1f                     /* no task ? go to dispatcher      */
-    l32i    a1,  a2, TOPOFSTACK_OFFS    /* SP = pxCurrentTCB->pxTopOfStack */
+    l32i    a1,  a2, TOS_OFFSET         /* SP = pxCurrentTCB->pxTopOfStack */
 
     movi    a2,  port_switch_flag       /* address of switch flag          */
     l32i    a3,  a2, 0                  /* a3 = port_switch_flag           */
@@ -205,129 +206,6 @@ _frxt_int_exit:
     l32i    a0,  a1, XT_STK_EXIT
     ret
 
-
-/*
-**********************************************************************************************************
-*                                           _frxt_timer_int
-*                                      void _frxt_timer_int(void)
-*
-* Implements the Xtensa RTOS porting layer's XT_RTOS_TIMER_INT function for FreeRTOS.
-* Called every timer interrupt.
-* Manages the tick timer and calls xPortSysTickHandler() every tick.
-* See the detailed description of the XT_RTOS_ENTER macro in xtensa_rtos.h.
-*
-* Callable from C (obeys ABI conventions). Implemented in assmebly code for performance.
-*
-**********************************************************************************************************
-*/
-    .globl  _frxt_timer_int
-    .type   _frxt_timer_int,@function
-    .align  4
-_frxt_timer_int:
-
-    /*
-    Xtensa timers work by comparing a cycle counter with a preset value.  Once the match occurs
-    an interrupt is generated, and the handler has to set a new cycle count into the comparator.
-    To avoid clock drift due to interrupt latency, the new cycle count is computed from the old,
-    not the time the interrupt was serviced. However if a timer interrupt is ever serviced more
-    than one tick late, it is necessary to process multiple ticks until the new cycle count is
-    in the future, otherwise the next timer interrupt would not occur until after the cycle
-    counter had wrapped (2^32 cycles later).
-
-    do {
-        ticks++;
-        old_ccompare = read_ccompare_i();
-        write_ccompare_i( old_ccompare + divisor );
-        service one tick;
-        diff = read_ccount() - old_ccompare;
-    } while ( diff > divisor );
-    */
-
-    ENTRY(16)
-
-.L_xt_timer_int_catchup:
-
-    /* Update the timer comparator for the next tick. */
-    #ifdef XT_CLOCK_FREQ
-    movi    a2, XT_TICK_DIVISOR         /* a2 = comparator increment          */
-    #else
-    movi    a3, _xt_tick_divisor
-    l32i    a2, a3, 0                   /* a2 = comparator increment          */
-    #endif
-    rsr     a3, XT_CCOMPARE             /* a3 = old comparator value          */
-    add     a4, a3, a2                  /* a4 = new comparator value          */
-    wsr     a4, XT_CCOMPARE             /* update comp. and clear interrupt   */
-    esync
-
-    #ifdef __XTENSA_CALL0_ABI__
-    /* Preserve a2 and a3 across C calls. */
-    s32i    a2, sp, 4
-    s32i    a3, sp, 8
-    #endif
-
-    /* Call the FreeRTOS tick handler (see port.c). */
-    #ifdef __XTENSA_CALL0_ABI__
-    call0   xPortSysTickHandler
-    #else
-    call4   xPortSysTickHandler
-    #endif
-
-    #ifdef __XTENSA_CALL0_ABI__
-    /* Restore a2 and a3. */
-    l32i    a2, sp, 4
-    l32i    a3, sp, 8
-    #endif
-
-    /* Check if we need to process more ticks to catch up. */
-    esync                               /* ensure comparator update complete  */
-    rsr     a4, CCOUNT                  /* a4 = cycle count                   */
-    sub     a4, a4, a3                  /* diff = ccount - old comparator     */
-    blt     a2, a4, .L_xt_timer_int_catchup  /* repeat while diff > divisor */
-
-    RET(16)
-
-    /*
-**********************************************************************************************************
-*                                           _frxt_tick_timer_init
-*                                      void _frxt_tick_timer_init(void)
-*
-* Initialize timer and timer interrrupt handler (_xt_tick_divisor_init() has already been been called).
-* Callable from C (obeys ABI conventions on entry).
-*
-**********************************************************************************************************
-*/
-    .globl  _frxt_tick_timer_init
-    .type   _frxt_tick_timer_init,@function
-    .align  4
-_frxt_tick_timer_init:
-
-    ENTRY(16)
-
-    /* Set up the periodic tick timer (assume enough time to complete init). */
-    #ifdef XT_CLOCK_FREQ
-    movi    a3, XT_TICK_DIVISOR
-    #else
-    movi    a2, _xt_tick_divisor
-    l32i    a3, a2, 0
-    #endif
-    rsr     a2, CCOUNT              /* current cycle count */
-    add     a2, a2, a3              /* time of first timer interrupt */
-    wsr     a2, XT_CCOMPARE         /* set the comparator */
-
-    /*
-    Enable the timer interrupt at the device level. Don't write directly
-    to the INTENABLE register because it may be virtualized.
-    */
-    #ifdef __XTENSA_CALL0_ABI__
-    movi    a2, XT_TIMER_INTEN
-    call0   xt_ints_on
-    #else
-    movi    a6, XT_TIMER_INTEN
-    call4   xt_ints_on
-    #endif
-
-    RET(16)
-
 /*
 **********************************************************************************************************
 *                                    DISPATCH THE HIGH READY TASK
@@ -367,7 +245,7 @@ _frxt_dispatch:
     call4   vTaskSwitchContext  // Get next TCB to resume
     #endif
     l32i    a3,  a2, 0
-    l32i    sp,  a3, TOPOFSTACK_OFFS     /* SP = next_TCB->pxTopOfStack;  */
+    l32i    sp,  a3, TOS_OFFSET     /* SP = next_TCB->pxTopOfStack */
     s32i    a3,  a2, 0
 
     /* Determine the type of stack frame. */
@@ -402,10 +280,10 @@ _frxt_dispatch:
 
     #if XCHAL_CP_NUM > 0
     /* Restore CPENABLE from task's co-processor save area. */
-    movi    a3, pxCurrentTCB            /* cp_state =                       */
+    movi    a3, pxCurrentTCB
     l32i    a3, a3, 0
-    l32i    a2, a3, CP_TOPOFSTACK_OFFS     /* StackType_t                       *pxStack; */
-    l16ui    a3, a2, XT_CPENABLE         /* CPENABLE = cp_state->cpenable;   */
+    l32i    a2, a3, EOS_OFFSET          /* a2 = base of coproc save area */
+    l16ui   a3, a2, XT_CPENABLE         /* a3 = saved CPENABLE value     */
     wsr     a3, CPENABLE
     #endif
 
@@ -493,15 +371,15 @@ vPortYield:
     movi    a3,  0
     l32i    a2,  a2, 0                  /* a2 = pxCurrentTCB                */
     s32i    a3,  sp, XT_SOL_EXIT        /* 0 to flag as solicited frame     */
-    s32i    sp,  a2, TOPOFSTACK_OFFS    /* pxCurrentTCB->pxTopOfStack = SP  */
+    s32i    sp,  a2, TOS_OFFSET         /* pxCurrentTCB->pxTopOfStack = SP  */
 
     #if XCHAL_CP_NUM > 0
     /* Clear CPENABLE, also in task's co-processor state save area. */
-    l32i    a2,  a2, CP_TOPOFSTACK_OFFS /* a2 = pxCurrentTCB->cp_state      */
+    l32i    a2,  a2, EOS_OFFSET         /* a2 = pxCurrentTCB->cp_state      */
     movi    a3,  0
     wsr     a3,  CPENABLE
     beqz    a2,  1f
-    s16i     a3,  a2, XT_CPENABLE        /* clear saved cpenable             */
+    s16i    a3,  a2, XT_CPENABLE        /* clear saved cpenable             */
 1:
     #endif
 
@@ -540,10 +418,10 @@ vPortYieldFromInt:
     /* Save CPENABLE in task's co-processor save area, and clear CPENABLE.  */
     movi    a3, pxCurrentTCB            /* cp_state =                       */
     l32i    a3, a3, 0
-    l32i    a2, a3, CP_TOPOFSTACK_OFFS
+    l32i    a2, a3, EOS_OFFSET
 
     rsr     a3, CPENABLE
-    s16i     a3, a2, XT_CPENABLE         /* cp_state->cpenable = CPENABLE;   */
+    s16i    a3, a2, XT_CPENABLE         /* cp_state->cpenable = CPENABLE;   */
     movi    a3, 0
     wsr     a3, CPENABLE                /* disable all co-processors        */
     #endif
@@ -557,40 +435,65 @@ vPortYieldFromInt:
     #endif
 
 /*
+--------------------------------------------------------------------------------
+  Task entry wrapper. Set up as the resume address in the initial stack frame.
+--------------------------------------------------------------------------------
+*/
+
+    .global     _xt_task_start
+    .type       _xt_task_start,@function
+    .align      4
+
+_xt_task_start:
+    l32i    a0, sp, XT_STK_PS               /* retrieve interruptee's PS        */
+    wsr     a0, PS
+    l32i    a0, sp, XT_STK_PC               /* retrieve interruptee's PC        */
+    wsr     a0, EPC_1
+    movi    a3, pxCurrentTCB
+    l32i    a3, a3, 0
+    l32i    a0, sp, XT_STK_A0               /* retrieve interruptee's A0        */
+    l32i    sp, sp, XT_STK_A1               /* remove interrupt stack frame     */
+    s32i    sp, a3, EOS_OFFSET              /* TCB->pxEndOfStack = CP save area */
+    rsync                                   /* ensure PS and EPC written        */
+    rfe                                     /* PS.EXCM is cleared               */
+
+/*
 **********************************************************************************************************
-*                                        _frxt_task_coproc_state
-*                                   void _frxt_task_coproc_state(void)
+*                                        _xt_task_coproc_state
+*                                   void _xt_task_coproc_state(void)
 *
 * Implements the Xtensa RTOS porting layer's XT_RTOS_CP_STATE function for FreeRTOS.
 *
 * May only be called when a task is running, not within an interrupt handler (returns 0 in that case).
 * May only be called from assembly code by the 'call0' instruction. Does NOT obey ABI conventions.
-* Returns in A15 a pointer to the base of the co-processor state save area for the current task.
+* Returns in a15 a pointer to the base of the co-processor state save area for the current task.
 * See the detailed description of the XT_RTOS_ENTER macro in xtensa_rtos.h.
 *
 **********************************************************************************************************
 */
 #if XCHAL_CP_NUM > 0
 
-    .globl  _frxt_task_coproc_state
-    .type   _frxt_task_coproc_state,@function
+    .globl  _xt_task_coproc_state
+    .type   _xt_task_coproc_state,@function
     .align  4
-_frxt_task_coproc_state:
 
-    movi    a15, port_xSchedulerRunning /* if (port_xSchedulerRunning              */
+_xt_task_coproc_state:
+
+    movi    a15, port_xSchedulerRunning /* if (port_xSchedulerRunning                   */
     l32i    a15, a15, 0
-    beqz    a15, 1f
-    movi    a15, port_interruptNesting  /* && port_interruptNesting == 0           */
+    beqz    a15, 2f
+    movi    a15, port_interruptNesting  /* && port_interruptNesting == 0                */
     l32i    a15, a15, 0
     bnez    a15, 1f
     movi    a15, pxCurrentTCB
-    l32i    a15, a15, 0                 /* && pxCurrentTCB != 0) {                 */
+    l32i    a15, a15, 0                 /* && pxCurrentTCB != 0) {                      */
     beqz    a15, 2f
-    l32i    a15, a15, CP_TOPOFSTACK_OFFS
+    l32i    a15, a15, EOS_OFFSET        /* a15 = pxCurrentTCB->pxEndOfStack             */
     ret
-
-1:  movi    a15, 0
-2:  ret
+1:
+    movi    a15, 0
+2:
+    ret
 
 #endif /* XCHAL_CP_NUM > 0 */
 

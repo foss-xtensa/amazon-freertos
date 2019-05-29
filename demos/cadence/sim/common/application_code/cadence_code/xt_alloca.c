@@ -154,7 +154,7 @@ static int test_alloca(void)
 */
 
 #define TASK_INIT_PRIO          20
-#define INIT_TASK_STK_SIZE      (0x1000 + XT_STACK_EXTRA_CLIB)
+#define INIT_TASK_STK_SIZE      (XT_STACK_EXTRA + 0x1000)
 
 static void Init_Task(void *pdata)
 {

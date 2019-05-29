@@ -51,172 +51,318 @@
  */
 
 #include <stdlib.h>
-#include <xtensa/config/core.h>
 
+#include <xtensa/hal.h>
+
+#include "xtensa_api.h"
 #include "xtensa_rtos.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 
 
-/* Defined in portasm.h */
-extern void _frxt_tick_timer_init(void);
+// Defined in xtensa_context.S.
+extern void _xt_coproc_init( void );
 
-/* Defined in xtensa_context.S */
-extern void _xt_coproc_init(void);
+// Defined in xtensa_vectors.S.
+extern void _xt_task_start( void );
+
+// Timer tick interval in cycles.
+static uint32_t xt_tick_cycles;
+
+// Flag to indicate tick handling should be skipped.
+static uint32_t xt_skip_tick;
+
+// Duplicate of inaccessible xSchedulerRunning.
+uint32_t port_xSchedulerRunning = 0U;
+
+// Interrupt nesting level.
+uint32_t port_interruptNesting  = 0U;
 
 
-/*-----------------------------------------------------------*/
-
-/* We require the address of the pxCurrentTCB variable, but don't want to know
-any details of its type. */
-typedef void TCB_t;
-extern volatile TCB_t * volatile pxCurrentTCB;
-
-unsigned port_xSchedulerRunning = 0; // Duplicate of inaccessible xSchedulerRunning; needed at startup to avoid counting nesting
-unsigned port_interruptNesting = 0;  // Interrupt nesting level
-
-/*-----------------------------------------------------------*/
-
-// User exception dispatcher when exiting
-void _xt_user_exit(void);
-
-/* 
- * Stack initialization
- */
-#if portUSING_MPU_WRAPPERS
-StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters, BaseType_t xRunPrivileged )
-#else
-StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
-#endif
+//-----------------------------------------------------------------------------
+// Tick timer interrupt handler.
+//-----------------------------------------------------------------------------
+static void xt_tick_handler( void )
 {
-	StackType_t *sp, *tp;
-	XtExcFrame  *frame;
-	#if XCHAL_CP_NUM > 0
-	uint32_t *p;
-	#endif
+    uint32_t diff;
 
-	/* Create interrupt stack frame aligned to 16 byte boundary */
-	sp = (StackType_t *) (((UBaseType_t)(pxTopOfStack + 1) - XT_CP_SIZE - XT_STK_FRMSZ) & ~0xf);
+    // Skip if flag set, but clear flag.
+    if (xt_skip_tick > 0) {
+        xt_skip_tick = 0;
+        return;
+    }
 
-	/* Clear the entire frame (do not use memset() because we don't depend on C library) */
-	for (tp = sp; tp <= pxTopOfStack; ++tp)
-		*tp = 0;
+    do
+    {
+        BaseType_t ret;
+        uint32_t   interruptMask;
+        uint32_t   ulOldCCompare = xt_get_ccompare( XT_TIMER_INDEX );
 
-	frame = (XtExcFrame *) sp;
+        // Set CCOMPARE for next tick.
+        xt_set_ccompare( XT_TIMER_INDEX, ulOldCCompare + xt_tick_cycles );
 
-	/* Explicitly initialize certain saved registers */
-	frame->pc   = (UBaseType_t) pxCode;             /* task entrypoint                */
-	frame->a0   = 0;                                /* to terminate GDB backtrace     */
-	frame->a1   = (UBaseType_t) sp + XT_STK_FRMSZ;  /* physical top of stack frame    */
-	frame->exit = (UBaseType_t) _xt_user_exit;      /* user exception exit dispatcher */
+        portbenchmarkIntLatency();
 
-	/* Set initial PS to int level 0, EXCM disabled ('rfe' will enable), user mode. */
-	/* Also set entry point argument parameter. */
-	#ifdef __XTENSA_CALL0_ABI__
-	frame->a2 = (UBaseType_t) pvParameters;
-	frame->ps = PS_UM | PS_EXCM;
-	#else
-	/* + for windowed ABI also set WOE and CALLINC (pretend task was 'call4'd). */
-	frame->a6 = (UBaseType_t) pvParameters;
-	frame->ps = PS_UM | PS_EXCM | PS_WOE | PS_CALLINC(1);
-	#endif
+        // Interrupts upto configMAX_SYSCALL_INTERRUPT_PRIORITY must be
+        // disabled before calling xTaskIncrementTick as it accesses the
+        // kernel lists.
+        interruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
+        {
+            ret = xTaskIncrementTick();
+        }
+        portCLEAR_INTERRUPT_MASK_FROM_ISR( interruptMask );
 
-	#ifdef XT_USE_SWPRI
-	/* Set the initial virtual priority mask value to all 1's. */
-	frame->vpri = 0xFFFFFFFF;
-	#endif
+        portYIELD_FROM_ISR( ret );
 
-	#if XCHAL_CP_NUM > 0
-	/* Init the coprocessor save area (see xtensa_context.h) */
-	/* No access to TCB here, so derive indirectly. Stack growth is top to bottom.
-         * //p = (uint32_t *) xMPUSettings->coproc_area;
-	 */
-	p = (uint32_t *)(((uint32_t) pxTopOfStack - XT_CP_SIZE) & ~0xf);
-	p[0] = 0;
-	p[1] = 0;
-	p[2] = (((uint32_t) p) + 12 + XCHAL_TOTAL_SA_ALIGN - 1) & -XCHAL_TOTAL_SA_ALIGN;
-	#endif
-
-	return sp;
+        diff = xt_get_ccount() - ulOldCCompare;
+    }
+    while ( diff > xt_tick_cycles );
 }
 
-/*-----------------------------------------------------------*/
-
-void vPortEndScheduler( void )
+//-----------------------------------------------------------------------------
+// Tick timer init. Install interrupt handler, set up first tick, and
+// enable timer interrupt.
+//-----------------------------------------------------------------------------
+static void xt_tick_timer_init( void )
 {
-	/* It is unlikely that the Xtensa port will get stopped.  If required simply
-	disable the tick interrupt here. */
+    // Compute the number of cycles per tick.
+    #ifdef XT_CLOCK_FREQ
+    xt_tick_cycles = ( XT_CLOCK_FREQ / XT_TICK_PER_SEC );
+    #else
+    #ifdef XT_BOARD
+    xt_tick_cycles = xtbsp_clock_freq_hz() / XT_TICK_PER_SEC;
+    #else
+    #error "No way to obtain processor clock frequency"
+    #endif
+    #endif
+
+    xt_set_interrupt_handler( XT_TIMER_INTNUM, (xt_handler) xt_tick_handler, 0 );
+    xt_set_ccompare( XT_TIMER_INDEX, xthal_get_ccount() + xt_tick_cycles );
+    xt_interrupt_enable( XT_TIMER_INTNUM );
 }
 
-/*-----------------------------------------------------------*/
+//-----------------------------------------------------------------------------
+// Tick timer stop. Disable timer interrupt and clear ccompare register.
+//-----------------------------------------------------------------------------
+static void xt_tick_timer_stop( void )
+{
+    xt_interrupt_disable( XT_TIMER_INTNUM );
+    xt_set_ccompare( XT_TIMER_INDEX, 0 );
+}
 
+//-----------------------------------------------------------------------------
+// Start the scheduler.
+//-----------------------------------------------------------------------------
 BaseType_t xPortStartScheduler( void )
 {
-	// Interrupts are disabled at this point and stack contains PS with enabled interrupts when task context is restored
+    // Interrupts are disabled at this point and stack contains PS with
+    // enabled interrupts when task context is restored.
 
-	#if XCHAL_CP_NUM > 0
-	/* Initialize co-processor management for tasks. Leave CPENABLE alone. */
-	_xt_coproc_init();
-	#endif
+    #if XCHAL_CP_NUM > 0
+    // Initialize co-processor management for tasks. Leave CPENABLE alone.
+    _xt_coproc_init();
+    #endif
 
-	/* Init the tick divisor value */
-	_xt_tick_divisor_init();
+    // Set up and enable timer tick.
+    xt_tick_timer_init();
 
-	/* Setup the hardware to generate the tick. */
-	_frxt_tick_timer_init();
+    #if XT_USE_THREAD_SAFE_CLIB
+    // Init C library
+    vPortClibInit();
+    #endif
 
-	#if XT_USE_THREAD_SAFE_CLIB
-	// Init C library
-	vPortClibInit();
-	#endif
+    port_xSchedulerRunning = 1U;
 
-	port_xSchedulerRunning = 1;
+    // Cannot be directly called from C; never returns
+    __asm__ volatile ("call0    _frxt_dispatch\n");
 
-	// Cannot be directly called from C; never returns
-	__asm__ volatile ("call0    _frxt_dispatch\n");
-
-	/* Should not get here. */
-	return pdTRUE;
+    // Should never get here.
+    return pdFALSE;
 }
-/*-----------------------------------------------------------*/
 
-BaseType_t xPortSysTickHandler( void )
+//-----------------------------------------------------------------------------
+// Stop the scheduler.
+//-----------------------------------------------------------------------------
+void vPortEndScheduler( void )
 {
-	BaseType_t ret;
-	uint32_t interruptMask;
-
-	portbenchmarkIntLatency();
-
-	/* Interrupts upto configMAX_SYSCALL_INTERRUPT_PRIORITY must be
-	 * disabled before calling xTaskIncrementTick as it access the
-	 * kernel lists. */
-	interruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
-	{
-		ret = xTaskIncrementTick();
-	}
-	portCLEAR_INTERRUPT_MASK_FROM_ISR( interruptMask );
-
-	portYIELD_FROM_ISR( ret );
-
-	return ret;
+    xt_tick_timer_stop();
+    port_xSchedulerRunning = 0U;
 }
-/*-----------------------------------------------------------*/
 
-/*
- * Used to set coprocessor area in stack. Current hack is to reuse MPU pointer for coprocessor area.
- */
-#if portUSING_MPU_WRAPPERS
-void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMORY_REGION * const xRegions, StackType_t *pxBottomOfStack, uint32_t ulStackDepth )
+//-----------------------------------------------------------------------------
+// Stack initialization.
+// Reserve coprocessor save area if needed, construct a dummy stack frame and
+// populate it for task startup. Return adjusted top-of-stack pointer, which
+// is also the pointer to the dummy stack frame.
+// (NOTE: the value returned from this function is expected to be stored in
+// pxTCB->pxTopOfStack. In the task wrapper code, we will copy this value into
+// pxTCB->pxEndOfStack, which will then be treated as the coprocessor state
+// area pointer.
+//-----------------------------------------------------------------------------
+StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
+                                    TaskFunction_t pxCode,
+                                    void * pvParameters )
 {
-	#if XCHAL_CP_NUM > 0
-	xMPUSettings->coproc_area = (StackType_t*)((((uint32_t)(pxBottomOfStack + ulStackDepth - 1)) - XT_CP_SIZE ) & ~0xf);
+    StackType_t *sp, *tp;
+    XtExcFrame  *frame;
+    #if XCHAL_CP_NUM > 0
+    uint32_t *p;
+    #endif
 
+    // Allocate enough space for coprocessor state, align base address. This is the
+    // adjusted top-of-stack.
+    sp = (StackType_t *) ((((uint32_t) pxTopOfStack) - (uint32_t) XT_CP_SIZE) & ~0xF);
 
-	/* NOTE: we cannot initialize the coprocessor save area here because FreeRTOS is going to
-         * clear the stack area after we return. This is done in pxPortInitialiseStack().
-	 */
-	#endif
+    // Allocate interrupt stack frame. XT_STK_FRMSZ is always a multiple of 16 bytes
+    // so 16-byte alignment is ensured.
+    tp = sp - (XT_STK_FRMSZ/sizeof(StackType_t));
+    frame = (XtExcFrame *) tp;
+
+    // Clear the frame (do not use memset() because we don't depend on C library).
+    for (; tp < sp; ++tp)
+    {
+        *tp = 0;
+    }
+
+    // Explicitly initialize certain saved registers.
+    frame->pc   = (UBaseType_t) pxCode;             // task entrypoint
+    frame->a0   = 0;                                // to terminate GDB backtrace
+    frame->a1   = (UBaseType_t) sp;                 // physical top of stack frame
+    frame->exit = (UBaseType_t) _xt_task_start;     // task start wrapper
+
+    // Set initial PS to int level 0, EXCM disabled ('rfe' will enable), user mode.
+    // Also set entry point argument parameter.
+    #ifdef __XTENSA_CALL0_ABI__
+    frame->a2 = (UBaseType_t) pvParameters;
+    frame->ps = PS_UM | PS_EXCM;
+    #else
+    // + for windowed ABI also set WOE and CALLINC (pretend task was 'call4'd).
+    frame->a6 = (UBaseType_t) pvParameters;
+    frame->ps = PS_UM | PS_EXCM | PS_WOE | PS_CALLINC(1);
+    #endif
+
+    #ifdef XT_USE_SWPRI
+    // Set the initial virtual priority mask value to all 1's.
+    frame->vpri = 0xFFFFFFFF;
+    #endif
+
+    #if XCHAL_CP_NUM > 0
+    // Init the coprocessor save area (see xtensa_context.h).
+    p = (uint32_t *) sp;
+    p[0] = 0;
+    p[1] = 0;
+    p[2] = (((uint32_t) p) + 12 + XCHAL_TOTAL_SA_ALIGN - 1) & -XCHAL_TOTAL_SA_ALIGN;
+    #endif
+
+    return (StackType_t *) frame;
+}
+
+//-----------------------------------------------------------------------------
+// Tickless idle support. Suppress N ticks and sleep when directed by kernel.
+//-----------------------------------------------------------------------------
+#if ( configUSE_TICKLESS_IDLE != 0 )
+void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
+{
+    TickType_t xMaxSuppressedTicks = 0xFFFFFFFFU / xt_tick_cycles;
+    eSleepModeStatus eSleepStatus;
+    uint32_t num_cycles;
+    uint32_t ps;
+
+    // Compute number of cycles to sleep for, capped by max limit.
+    // we use one less than the number of ticks because we are already
+    // partway through the current tick. This is adjusted later below.
+    if ( xExpectedIdleTime > xMaxSuppressedTicks )
+    {
+        num_cycles = xt_tick_cycles * ( xMaxSuppressedTicks - 1U );
+    }
+    else
+    {
+        num_cycles = xt_tick_cycles * ( xExpectedIdleTime - 1U );
+    }
+
+    // Lock out all interrupts. Otherwise reading and using ccount can
+    // get messy. Shouldn't be a problem here since we are about to go
+    // to sleep, and the waiti will re-enable interrupts shortly.
+    ps = XT_RSIL( XCHAL_NUM_INTLEVELS );
+
+    eSleepStatus = eTaskConfirmSleepModeStatus();
+    if ( eSleepStatus == eAbortSleep )
+    {
+        // Abort, fall through.
+    }
+    else
+    {
+        uint32_t cnt1;
+        uint32_t cnt2;
+        uint32_t ticks;
+        uint32_t save_ccompare = xt_get_ccompare( XT_TIMER_INDEX );
+
+        // We don't want the timer handler to be run before execution can
+        // resume after waiti, so set the skip flag.
+        xt_skip_tick = 1;
+
+        // Adjust for the remaining time in the current tick period.
+        cnt1 = xthal_get_ccount();
+        num_cycles += save_ccompare - cnt1;
+
+        if ( (save_ccompare - cnt1) > xt_tick_cycles )
+        {
+            // The only way this can happen is if the interrupt is pending.
+            XT_WSR_PS( ps );
+            return;
+        }
+
+        // Set up for timer interrupt and sleep.
+        xt_set_ccompare( XT_TIMER_INDEX, cnt1 + num_cycles );
+        XT_WAITI( 0 );
+
+        // Block interrupts again before messing around with ccount.
+        XT_RSIL( XCHAL_NUM_INTLEVELS );
+        cnt2 = xthal_get_ccount();
+
+        // Set up the next tick. This works whether we were woken up by the
+        // tick interrupt or some other interrupt. It pulls in the next tick
+        // interrupt if we were woken by something else.
+
+        // Set up the next tick. How we do it depends on what woke us up.
+        // If we still haven't reached the 'old' tick target (save_ccompare)
+        // then obviously we were woken by another interrupt. Set the next
+        // tick time back to what it was, as long as it is not so close to
+        // ccount as to risk ccount going past it while we are setting it.
+        if ( (int32_t)(save_ccompare - cnt2) > 100 )
+        {
+            xt_set_ccompare( XT_TIMER_INDEX, save_ccompare );
+        }
+        else
+        {
+            xt_set_ccompare( XT_TIMER_INDEX, xt_tick_cycles - ((cnt2 - cnt1) % xt_tick_cycles) + cnt2 );
+        }
+
+        // Step the tick count forward by the number of ticks that actually
+        // elapsed before wakeup, less 1.
+        ticks = ( cnt2 - cnt1 ) / xt_tick_cycles;
+
+        if ( ticks > 1U )
+        {
+            vTaskStepTick( ticks - 1U );
+        }
+        else
+        {
+            // We need to keep track of partial tick periods spent in sleep
+            // else the tick count will fall behind.
+            static uint32_t accum_cycles = 0U;
+
+            accum_cycles += cnt2 - cnt1;
+            while ( accum_cycles > xt_tick_cycles )
+            {
+                vTaskStepTick( 1 );
+                accum_cycles -= xt_tick_cycles;
+            }
+        }
+    }
+
+    XT_WSR_PS( ps );
 }
 #endif
 

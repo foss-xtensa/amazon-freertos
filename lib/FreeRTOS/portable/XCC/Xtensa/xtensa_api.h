@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2015-2019 Cadence Design Systems, Inc.
  *
@@ -22,13 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * Xtensa-specific API for RTOS ports.
- */
+/******************************************************************************
+  Xtensa-specific API for RTOS ports.
+******************************************************************************/
 
 #ifndef __XTENSA_API_H__
 #define __XTENSA_API_H__
 
+#include <stdint.h>
 #include <xtensa/hal.h>
 
 #include "xtensa_context.h"
@@ -57,7 +57,7 @@ typedef void (*xt_exc_handler)(XtExcFrame *);
   of the exception frame structure see xtensa_context.h.
 -------------------------------------------------------------------------------
 */
-extern xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f);
+extern xt_exc_handler xt_set_exception_handler( uint32_t n, xt_exc_handler f );
 
 
 /*
@@ -69,54 +69,78 @@ extern xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f);
     arg      - Argument to be passed to handler.
 -------------------------------------------------------------------------------
 */
-extern xt_handler xt_set_interrupt_handler(int n, xt_handler f, void * arg);
+extern xt_handler xt_set_interrupt_handler( uint32_t n, xt_handler f, void * arg );
 
 
 /*
 -------------------------------------------------------------------------------
-  Call this function to enable the specified interrupts.
+  Call this function to enable the specified interrupt.
 
-    mask     - Bit mask of interrupts to be enabled.
+    intnum    - Interrupt number to be enabled.
 
-  Returns the previous state of the interrupt enables.
+  Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-extern unsigned int xt_ints_on(unsigned int mask);
+extern void xt_interrupt_enable( uint32_t intnum );
 
 
 /*
 -------------------------------------------------------------------------------
-  Call this function to disable the specified interrupts.
+  Call this function to disable the specified interrupt.
 
-    mask     - Bit mask of interrupts to be disabled.
+    intnum    - Interrupt number to be disabled.
 
-  Returns the previous state of the interrupt enables.
+  Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-extern unsigned int xt_ints_off(unsigned int mask);
+extern void xt_interrupt_disable( uint32_t intnum );
 
 
 /*
 -------------------------------------------------------------------------------
-  Call this function to set the specified (s/w) interrupt.
+  Call this function to check the enable state of the specified interrupt.
+
+    intnum    - Interrupt number to be checked.
+
+  Returns: 1 if the specified interrupt is enabled, zero if the interrupt is
+  disabled, zero if the interrupt number is invalid.
 -------------------------------------------------------------------------------
 */
-static inline void xt_set_intset(unsigned int arg)
-{
-    xthal_set_intset(arg);
-}
+uint32_t
+xt_interrupt_enabled( uint32_t intnum );
+
+
+/*
+-------------------------------------------------------------------------------
+  Call this function to trigger the specified (s/w) interrupt.
+
+    intnum    - Interrupt number to be triggered.
+
+  Returns: Nothing.
+-------------------------------------------------------------------------------
+*/
+extern void xt_interrupt_trigger( uint32_t intnum );
 
 
 /*
 -------------------------------------------------------------------------------
   Call this function to clear the specified (s/w or edge-triggered)
   interrupt.
+
+    intnum    - Interrupt number to be cleared.
+
+Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-static inline void xt_set_intclear(unsigned int arg)
-{
-    xthal_set_intclear(arg);
-}
+extern void xt_interrupt_clear( uint32_t intnum );
+
+
+/*
+ * These map directly to HAL functions.
+ */
+#define xt_get_ccount           xthal_get_ccount
+#define xt_get_ccompare(t)      xthal_get_ccompare(t)
+#define xt_set_ccompare(t,v)    xthal_set_ccompare(t,v)
 
 
 #endif /* __XTENSA_API_H__ */

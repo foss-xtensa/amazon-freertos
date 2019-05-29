@@ -74,7 +74,17 @@
 /* Required for configuration-dependent settings */
 #include "xtensa_config.h"
 
-/*-----------------------------------------------------------
+/*
+ *-----------------------------------------------------------------------------
+ * Xtensa port specific definitions. These are required for proper operation
+ * and must not be changed.
+ *-----------------------------------------------------------------------------
+ */
+
+#define configRECORD_STACK_HIGH_ADDRESS		1
+
+/*
+ *-----------------------------------------------------------------------------
  * Application specific definitions.
  *
  * These definitions should be adjusted for your particular hardware and
@@ -86,7 +96,8 @@
  *
  * THESE PARAMETERS ARE DESCRIBED WITHIN THE 'CONFIGURATION' SECTION OF THE
  * FreeRTOS API DOCUMENTATION AVAILABLE ON THE FreeRTOS.org WEB SITE. 
- *----------------------------------------------------------*/
+ *-----------------------------------------------------------------------------
+ */
 
 #define configUSE_PREEMPTION			1
 #define configUSE_IDLE_HOOK				0
@@ -98,6 +109,9 @@
 #endif
 
 #define configTICK_RATE_HZ				( 50 )
+
+/* Use port-defined tickless idle */
+#define configUSE_TICKLESS_IDLE 		2
 
 /* Default clock rate for simulator */
 #define configCPU_CLOCK_HZ				2000000

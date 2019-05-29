@@ -122,6 +122,7 @@ vPortClibInit(void)
 void
 _reclaim_reent(void * ptr)
 {
+	(void ) ptr;	/* Avoid compiler warning */
 }
 
 #endif /* XSHAL_CLIB == XTHAL_CLIB_XCLIB */
@@ -145,6 +146,9 @@ static uint32_t  ulClibInitDone = 0;
 void
 __malloc_lock(struct _reent * ptr)
 {
+    // Suppress compiler warning.
+    (void) ptr;
+
     if (!ulClibInitDone)
         return;
 
@@ -157,6 +161,9 @@ __malloc_lock(struct _reent * ptr)
 void
 __malloc_unlock(struct _reent * ptr)
 {
+    // Suppress compiler warning.
+    (void) ptr;
+
     if (!ulClibInitDone)
         return;
 

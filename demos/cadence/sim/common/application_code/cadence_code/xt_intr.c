@@ -69,7 +69,7 @@ volatile int iExcCount = 0;
 /* Stack size for tasks that do not use the C library. */
 #define     TASK_STK_SIZE_MIN       (XT_STACK_MIN_SIZE)
 /* Stack size for tasks that use the C library and/or the coprocessors */
-#define     TASK_STK_SIZE_STD       (0x1000 + XT_STACK_EXTRA_CLIB)
+#define     TASK_STK_SIZE_STD       (XT_STACK_EXTRA + 0x1000)
 
 /* Queue for passing count. */
 #define     QUEUE_SIZE              16
@@ -189,13 +189,13 @@ static void Task1(void *pvData)
 
     /* Set up interrupt handling and enable interrupt */
     xt_set_interrupt_handler(uiSwIntNum, softwareIntHandler, (void*)xSem);
-    xt_ints_on(1 << uiSwIntNum);
+    xt_interrupt_enable(uiSwIntNum);
 
 #ifdef XT_USE_SWPRI
     /* Set up the higher priority interrupt if available */
     if (uiSwInt2Num) {
         xt_set_interrupt_handler(uiSwInt2Num, softwareHighHandler, 0);
-        xt_ints_on(1 << uiSwInt2Num);
+        xt_interrupt_enable(uiSwInt2Num);
     }
 #endif
 
@@ -213,7 +213,7 @@ static void Task1(void *pvData)
         putchar('+');
 
         /* Now trigger the interrupt handler */
-        xt_set_intset(1 << uiSwIntNum);
+        xt_interrupt_trigger(uiSwIntNum);
     }
 
 #ifdef DEMO_USE_PRINTF

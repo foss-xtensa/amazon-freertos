@@ -70,7 +70,7 @@ However these can still be overridden from the command line.
 #endif
 
 #ifndef XT_BOARD
-  #if configXT_BOARD
+  #if defined (configXT_BOARD) && (configXT_BOARD != 0)
     #define XT_BOARD                 1  /* Board mode */
   #endif
 #endif
@@ -160,7 +160,7 @@ and by the 'call0' instruction. A result of 0 indicates an unrecoverable error.
 The implementation may use only a2-4, a15 (all other regs must be preserved).
 */
 // void* XT_RTOS_CP_STATE(void)
-#define XT_RTOS_CP_STATE    _frxt_task_coproc_state
+#define XT_RTOS_CP_STATE    _xt_task_coproc_state
 
 
 /*******************************************************************************
@@ -227,8 +227,8 @@ Xtensa Port Version.
 
 *******************************************************************************/
 
-#define XTENSA_PORT_VERSION             1.7
-#define XTENSA_PORT_VERSION_STRING      "1.7"
+#define XTENSA_PORT_VERSION             2.0
+#define XTENSA_PORT_VERSION_STRING      "2.0"
 
 #endif /* XTENSA_RTOS_H */
 

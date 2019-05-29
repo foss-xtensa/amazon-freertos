@@ -60,8 +60,10 @@ IFLAGS      = \
   -I$(FR_SRCDIR)$(S)..$(S)include -I$(FR_SRCDIR)$(S)..$(S)include$(S)private \
   -I$(XT_SRCDIR) -I$(TSTROOT)$(S)common$(S)config_files -I$(BLDDIR)
 
+CSTD        = -std=c99
 CFLAGS      = -O2 -g
-CCFLAGS     = $(CFLAGS) -Wall -mno-coproc -mlongcalls -ffunction-sections -mno-l32r-flix $(DFLAGS)
+WFLAGS      = -Werror -Wall -Wextra
+CCFLAGS     = $(CSTD) $(CFLAGS) $(WFLAGS) -mno-coproc -mlongcalls -ffunction-sections -mno-l32r-flix $(DFLAGS)
 ASFLAGS     = $(CCFLAGS)
 
 # Include dependency rules (generated using -MD)

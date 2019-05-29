@@ -76,7 +76,7 @@
 #define     TASK_STK_SIZE_MIN       (XT_STACK_MIN_SIZE)
 
 /* Stack size for tasks that use the C library and/or the coprocessors */
-#define     TASK_STK_SIZE_STD       (0x1000 + XT_STACK_EXTRA_CLIB)
+#define     TASK_STK_SIZE_STD       (XT_STACK_EXTRA + 0x1000)
 
 /* Uniform prefix for reporting PASS/FAIL test results. */
 #define TEST_PFX    "Xtensa co-processor context-switch test (xt_coproc)"

@@ -49,16 +49,13 @@ extern "C" {
 *                                 STACK REQUIREMENTS
 *
 * This section defines the minimum stack size, and the extra space required to
-* be allocated for saving coprocessor state and/or C library state information
-* (if thread safety is enabled for the C library). The sizes are in bytes.
+* be allocated for saving coprocessor state on the stack when needed. The sizes
+* are in bytes.
 *
 * Stack sizes for individual tasks should be derived from these minima based on
-* the maximum call depth of the task and the maximum level of interrupt nesting.
-* A minimum stack size is defined by XT_STACK_MIN_SIZE. This minimum is based
-* on the requirement for a task that calls nothing else but can be interrupted.
-* This assumes that interrupt handlers do not call more than a few levels deep.
-* If this is not true, i.e. one or more interrupt handlers make deep calls then
-* the minimum must be increased.
+* the maximum call depth of the task. A minimum stack size is defined by the
+* XT_STACK_MIN_SIZE value. This minimum is based on the requirement for a task
+* that calls nothing else but can be interrupted.
 *
 * If the Xtensa processor configuration includes coprocessors, then space is 
 * allocated to save the coprocessor state on the stack.
@@ -72,9 +69,7 @@ extern "C" {
 * Usage:
 * 
 * XT_USE_THREAD_SAFE_CLIB -- Define this to a nonzero value to enable thread-safe
-*                            use of the C library. This will require extra stack
-*                            space to be allocated for tasks that use the C library
-*                            reentrant functions. See below for more information.
+*                            use of the C library.
 * 
 * NOTE: The Xtensa toolchain supports multiple C libraries and not all of them
 * support thread safety. Check your core configuration to see which C library
@@ -86,12 +81,13 @@ extern "C" {
 *                            size, you must verify that the smaller size(s) will work
 *                            under all operating conditions.
 *
-* XT_STACK_EXTRA          -- The amount of extra stack space to allocate for a task
-*                            that does not make C library reentrant calls. Add this
-*                            to the amount of stack space required by the task itself.
+* XT_STACK_EXTRA          -- The amount of extra stack space to be allocated for the
+*                            system overhead (coprocessor state, exception frame etc.).
+*                            Add this to the amount of stack space required by the
+*                            task itself.
 *
-* XT_STACK_EXTRA_CLIB     -- The amount of space to allocate for C library state.
-*
+* XT_SYSTEM_STACK_SIZE    -- The size of the system interrupt stack. You will need to
+*                            size this according to your system requirements.
 -----------------------------------------------------------------------------*/
 
 /* Extra space required for interrupt/exception hooks. */
@@ -170,10 +166,11 @@ extern "C" {
 /* Minimum recommended stack size. */
 #define XT_STACK_MIN_SIZE         ((XT_XTRA_SIZE + XT_USER_SIZE) / sizeof(unsigned char))
 
-/* OS overhead with and without C library thread context. */
-#define XT_STACK_EXTRA              (XT_XTRA_SIZE)
-#define XT_STACK_EXTRA_CLIB         (XT_XTRA_SIZE + XT_CLIB_CONTEXT_AREA_SIZE)
+/* OS overhead. */
+#define XT_STACK_EXTRA            (XT_XTRA_SIZE)
 
+/* Default system (interrupt) stack size */
+#define XT_SYSTEM_STACK_SIZE      0x400
 
 #ifdef __cplusplus
 }

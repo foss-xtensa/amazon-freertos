@@ -1,17 +1,13 @@
-    FreeRTOS Port for Xtensa Configurable and Diamond Processors
-    ============================================================
 
-                FreeRTOS Kernel Version 10.0.0
+        FreeRTOS Port for Xtensa Configurable Processors
+        ================================================
 
 
 Introduction
 ------------
 
-This document describes the Xtensa port for FreeRTOS multitasking RTOS.
-For an introduction to FreeRTOS itself, please refer to FreeRTOS
-documentation.
-
-This port currently works with FreeRTOS kernel version 10.0.0.
+This document describes the Xtensa port of the Amazon FreeRTOS embedded RTOS.
+Please refer to FreeRTOS documentation for an overview of FreeRTOS itself.
 
 
 Xtensa Configuration Requirements and Restrictions
@@ -33,11 +29,6 @@ This port includes optional reentrancy support for the 'newlib' and
 thread-safety on a per task basis (for use in tasks only, not interrupt
 handlers).
 
-NOTE: At this time only 'newlib' and 'xclib' C libraries are supported
-for thread safety. The 'uclibc' library is not reentrant and does not
-provide thread safety at this time. However, if you are not concerned
-with reentrancy then you can use any of these libraries.
-
 This port also includes a simple example application that may run on
 a supported board or the Xtensa instruction set simulator (ISS). There
 are also a couple of test programs used in maintaining the port, which
@@ -45,12 +36,10 @@ serve as additional examples.
 
 FreeRTOS for Xtensa configurable processors requires the following minimum 
 processor configuration options:
+
 - Timer interrupt option with at least one interruptible timer.
 - Interrupt option (implied by the timer interrupt option).
-- Exception Architecture 2 (XEA2). Please note that XEA1 is NOT supported.
-  All 'Diamond', 'Xtensa 6', 'Xtensa LX' and 'Xtensa LX2' processors and
-  most 'Xtensa T1050' processors are configured with XEA2.
-All Diamond processor cores meet these requirements and are supported.
+- Exception Architecture 2 (XEA2) (Neither XEA1 nor XEA3 is supported).
 
 Minimal support for certain evaluation boards is provided via a board
 independent XTBSP API implemented by a board specific library distributed
@@ -58,7 +47,7 @@ with the Xtensa Tools. This provides the board clock frequency and basic
 polled drivers for the display and console device. Note that XTBSP
 is not a tradtional RTOS "board support package" with RTOS specific
 interrupt-driven drivers - it is not specific to any RTOS. Note that
-FreeRTOS can run on any Xtensa or Diamond board without this board support
+FreeRTOS can run on any Xtensa board without this board support
 (a "raw" platform), but you will have to provide the clock frequency
 and drivers for any on-board devices you want to use.
 
@@ -76,7 +65,8 @@ version 1.0.0 or later from this location:
 
     https://github.com/aws/amazon-freertos
 
-The Xtensa port files are currently not included in the official package.
+The Xtensa port files are included in the official package but may not be
+the latest versions available.
 
 All source is provided along with a Makefile that works for any host
 platform supported by Xtensa Tools (Windows, Linux). These instructions
@@ -212,7 +202,7 @@ parameters based on what you specified.
 You can override the default compilation options by specifying the new
 options via CFLAGS. For example:
 
-> xt-make all TARGET=sim CFLAGS="-O2 -Os -g"
+> xt-make all TARGET=sim CFLAGS="-Os -g"
 
 This compiles the examples and links them with the FreeRTOS library
 libfreertos.a and the appropriate linker-support package (LSP) for your
@@ -235,17 +225,8 @@ to a nonzero value either in xtensa_config.h or on the compiler's command
 line. Note that the default xtensa_config.h provided with this port does
 define this to 1 if either newlib or xclib is detected.
 
-Then, you must also make sure to allocate extra space on the stack for
-each task that will use the C library reentrant functions. This extra
-space is to be allocated over and above the actual stack space required
-by the task itself. The define
-
-    XT_STACK_EXTRA_CLIB
-
-specifies the amount of extra space to be added on to the stack to allow
-saving the context for the C library as well as the coprocessors if any.
-E.g. if your task requires 2000 bytes of stack space, you must allocate
-(2000 + XT_STACK_EXTRA_CLIB) bytes for the stack.
+The space for the per-thread C library context data is allocated within
+the FreeRTOS TCB structure.
 
 
 IMPORTANT NOTE
@@ -267,11 +248,13 @@ Running or Debugging an Application
 
 To execute the example application on the simulator:
 
-> xt-run [--turbo] example.exe
+> xt-run [options] example.exe
 
-The option --turbo provides much faster, but non-cycle-accurate simulation
-(the --turbo option is only available with Xtensa Tools version 7 or later).
+Consult the Xtensa simulator user manual for more information on options.
 
+To execute the example using the command line debugger:
+
+> xt-gdb example.exe
 
 To execute on the simulator using the Xplorer GUI based debugger:
 
@@ -292,7 +275,7 @@ any Xtensa platform, including simulator and any board, but you will not
 see any behavior specific to the platform (eg. display, printed output,
 stopping simulation at end of program). You can, while debugging, use a
 debugger mechanism called GDBIO to obtain basic I/O. To use GDBIO, link
-with the gdbio LSP. Refer to Xtensa tools documentation for details.
+with the gdbio library. Refer to Xtensa tools documentation for details.
 
 
 Task Stack Sizes
@@ -495,11 +478,8 @@ frames differentiates solicited and interrupt stack frames.
 Improving Performance, Footprint, or Ease of Debugging
 ------------------------------------------------------
 
-By default FreeRTOS for Xtensa is built with debug (-g) and without
-compiler optimizations (-O0). This makes debugging easier. Of course,
--O0 costs performance and usually also increases stack usage. To make
-FreeRTOS run faster you can change the Makefile to enable the desired
-optimizations or set a predefined optimization level (-O<level>) .
+To make FreeRTOS run faster you can change the Makefile to enable the
+desired optimizations or set a predefined optimization level (-O<level>).
 
 Maximum performance is achieved with -O3 -ipa, but that might increase 
 the footprint substantially. A good compromise is -O2. See the compiler
@@ -615,9 +595,7 @@ User Exception and Interrupt Handler (Low/Medium Priority):
     default handler will be called, which will terminate the program.
 
     If the interrupt is for the system timer, it calls a special interrupt
-    handler for the system timer tick, which calls _frxt_timer_int then
-    clears its bit from the mask. This interrupt cannot be hooked by the
-    user-defined handler.
+    handler for the system timer tick, which handles timer tick processing.
 
     Finally, the handler calls _frxt_int_exit to allow FreeRTOS to perform
     any scheduling necessary and return either to the interrupted task

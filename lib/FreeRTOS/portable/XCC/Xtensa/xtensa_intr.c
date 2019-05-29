@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2015-2019 Cadence Design Systems, Inc.
  *
@@ -22,14 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * Xtensa-specific interrupt and exception functions for RTOS ports.
- * Also see xtensa_intr_asm.S.
- */
+/******************************************************************************
+  Xtensa-specific interrupt and exception functions for RTOS ports.
+  Also see xtensa_intr_asm.S.
+******************************************************************************/
 
 #include <stdlib.h>
 
 #include <xtensa/config/core.h>
+#include <xtensa/core-macros.h>
 
 #include "xtensa_api.h"
 
@@ -37,63 +37,81 @@
 #if XCHAL_HAVE_EXCEPTIONS
 
 /* Handler table is in xtensa_intr_asm.S */
-
-extern xt_exc_handler _xt_exception_table[XCHAL_EXCCAUSE_NUM];
+extern xt_exc_handler xt_exception_table[XCHAL_EXCCAUSE_NUM];
 
 
 /*
   Default handler for unhandled exceptions.
 */
-void xt_unhandled_exception(XtExcFrame *frame)
+void
+xt_unhandled_exception( XtExcFrame * frame )
 {
-    exit(-1);
+    (void) frame;
+    exit( -1 );
 }
 
 
 /*
   This function registers a handler for the specified exception.
   The function returns the address of the previous handler.
-  On error, it returns 0.
+  On error, it returns NULL.
 */
-xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f)
+xt_exc_handler
+xt_set_exception_handler( uint32_t n, xt_exc_handler f )
 {
     xt_exc_handler old;
 
-    if( n < 0 || n >= XCHAL_EXCCAUSE_NUM )
-        return 0;       /* invalid exception number */
-
-    old = _xt_exception_table[n];
-
-    if (f) {
-        _xt_exception_table[n] = f;
-    }
-    else {
-        _xt_exception_table[n] = &xt_unhandled_exception;
+    if ( n >= (uint32_t) XCHAL_EXCCAUSE_NUM )
+    {
+        // Invalid exception number.
+        return NULL;
     }
 
-    return ((old == &xt_unhandled_exception) ? 0 : old);
+    old = xt_exception_table[n];
+
+    if ( f != NULL )
+    {
+        xt_exception_table[n] = f;
+    }
+    else
+    {
+        xt_exception_table[n] = &xt_unhandled_exception;
+    }
+
+    return old;
 }
 
 #endif
 
 #if XCHAL_HAVE_INTERRUPTS
 
-/* Handler table is in xtensa_intr_asm.S */
+#if XCHAL_HAVE_XEA2
+/* Defined in xtensa_intr_asm.S */
+extern uint32_t xt_intenable;
+extern uint32_t xt_vpri_mask;
+#endif
 
+/* Handler table is in xtensa_intr_asm.S */
 typedef struct xt_handler_table_entry {
     void * handler;
     void * arg;
 } xt_handler_table_entry;
 
-extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS];
+#if (XT_USE_INT_WRAPPER || XCHAL_HAVE_XEA3)
+extern xt_handler_table_entry xt_interrupt_table[XCHAL_NUM_INTERRUPTS + 1];
+#else
+extern xt_handler_table_entry xt_interrupt_table[XCHAL_NUM_INTERRUPTS];
+#endif
 
 
 /*
   Default handler for unhandled interrupts.
 */
-void xt_unhandled_interrupt(void * arg)
+void
+xt_unhandled_interrupt( void * arg )
 {
-    exit(-1);
+    (void) arg;
+    exit( -1 );
 }
 
 
@@ -101,31 +119,134 @@ void xt_unhandled_interrupt(void * arg)
   This function registers a handler for the specified interrupt. The "arg"
   parameter specifies the argument to be passed to the handler when it is
   invoked. The function returns the address of the previous handler.
-  On error, it returns 0.
+  On error, it returns NULL.
 */
-xt_handler xt_set_interrupt_handler(int n, xt_handler f, void * arg)
+xt_handler
+xt_set_interrupt_handler( uint32_t n, xt_handler f, void * arg )
 {
     xt_handler_table_entry * entry;
     xt_handler               old;
 
-    if( n < 0 || n >= XCHAL_NUM_INTERRUPTS )
-        return 0;       /* invalid interrupt number */
-    if( Xthal_intlevel[n] > XCHAL_EXCM_LEVEL )
-        return 0;       /* priority level too high to safely handle in C */
+    if ( n >= (uint32_t) XCHAL_NUM_INTERRUPTS )
+    {
+        // Invalid interrupt number.
+        return NULL;
+    }
 
-    entry = _xt_interrupt_table + n;
+#if XCHAL_HAVE_XEA2
+    if ( Xthal_intlevel[n] > XCHAL_EXCM_LEVEL )
+    {
+        // Priority level too high to safely handle in C.
+        return NULL;
+    }
+#endif
+
+#if (XT_USE_INT_WRAPPER || XCHAL_HAVE_XEA3)
+    entry = xt_interrupt_table + n + 1;
+#else
+    entry = xt_interrupt_table + n;
+#endif
     old   = entry->handler;
 
-    if (f) {
+    if ( f != NULL )
+    {
         entry->handler = f;
         entry->arg     = arg;
     }
-    else {
+    else
+    {
         entry->handler = &xt_unhandled_interrupt;
         entry->arg     = (void*)n;
     }
 
-    return ((old == &xt_unhandled_interrupt) ? 0 : old);
+    return old;
+}
+
+
+/*
+  This function enables the interrupt whose number is specified as
+  the argument.
+*/
+void
+xt_interrupt_enable( uint32_t intnum )
+{
+#if XCHAL_HAVE_XEA2
+    if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
+    {
+        uint32_t ps = XT_RSIL( 15 );
+
+        // New INTENABLE = (xt_intenable | mask) & xt_vpri_mask.
+        xt_intenable |= ( 1U << intnum );
+        XT_WSR_INTENABLE( xt_intenable & xt_vpri_mask );
+        XT_WSR_PS( ps );
+        XT_RSYNC();
+    }
+#else
+    xthal_interrupt_enable( intnum );
+#endif
+}
+
+
+/*
+  This function disables the interrupt whose number is specified as
+  the argument.
+*/
+void
+xt_interrupt_disable( uint32_t intnum )
+{
+#if XCHAL_HAVE_XEA2
+    if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
+    {
+        uint32_t ps = XT_RSIL( 15 );
+
+        // New INTENABLE = (xt_intenable & ~mask) & xt_vpri_mask.
+        xt_intenable &= ~( 1U << intnum );
+        XT_WSR_INTENABLE( xt_intenable & xt_vpri_mask );
+        XT_WSR_PS( ps );
+        XT_RSYNC();
+    }
+#else
+    xthal_interrupt_disable( intnum );
+#endif
+}
+
+
+/*
+  This function returns : 1 if the specified interrupt is enabled, zero
+  if the interrupt is disabled, zero if the interrupt number is invalid.
+*/
+uint32_t
+xt_interrupt_enabled( uint32_t intnum )
+{
+#if XCHAL_HAVE_XEA2
+    if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
+    {
+        return ( (xt_intenable & (1U << intnum)) != 0 ) ? 1U : 0;
+    }
+    return 0;
+#else
+    return xthal_interrupt_enabled( intnum );
+#endif
+}
+
+
+/*
+  This function triggers the specified interrupt.
+*/
+void
+xt_interrupt_trigger( uint32_t intnum )
+{
+    xthal_interrupt_trigger( intnum );
+}
+
+
+/*
+  This function clears the specified interrupt.
+*/
+void
+xt_interrupt_clear( uint32_t intnum )
+{
+    xthal_interrupt_clear( intnum );
 }
 
 

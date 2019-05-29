@@ -63,11 +63,7 @@ extern "C" {
 
 #include <xtensa/tie/xt_core.h>
 #include <xtensa/hal.h>
-#include <xtensa/config/core.h>
 #include <xtensa/config/system.h>	/* required for XSHAL_CLIB */
-#include <xtensa/xtruntime.h>
-
-//#include "xtensa_context.h"
 
 /*-----------------------------------------------------------
  * Port specific definitions.
@@ -105,22 +101,59 @@ typedef unsigned portBASE_TYPE	UBaseType_t;
 // portbenchmark
 #include "portbenchmark.h"
 
-/* Critical section management. NW-TODO: replace XTOS_SET_INTLEVEL with more efficient version, if any? */
-// These cannot be nested. They should be used with a lot of care and cannot be called from interrupt level.
-#define portDISABLE_INTERRUPTS()      do { XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL); portbenchmarkINTERRUPT_DISABLE(); } while (0)
-#define portENABLE_INTERRUPTS()       do { portbenchmarkINTERRUPT_RESTORE(0); XTOS_SET_INTLEVEL(0); } while (0)
+// Critical section management. These cannot be nested. They should be used
+// with a lot of care and cannot be called from interrupt context.
+static inline void
+portDISABLE_INTERRUPTS(void)
+{
+#if XCHAL_HAVE_INTERRUPTS
+	XT_RSIL (15);
+#endif
+	portbenchmarkINTERRUPT_DISABLE ();
+}
 
-// These can be nested
-#define portCRITICAL_NESTING_IN_TCB 1  // For now, let FreeRTOS' (tasks.c) manage critical nesting
-void vTaskEnterCritical(void);
-void vTaskExitCritical(void);
+static inline void
+portENABLE_INTERRUPTS(void)
+{
+	portbenchmarkINTERRUPT_RESTORE (0);
+#if XCHAL_HAVE_INTERRUPTS
+	XT_RSIL (0);
+#endif
+}
+
+// Nested critical sections. Nesting managed by FreeRTOS.
+#define portCRITICAL_NESTING_IN_TCB	1
+
+extern void vTaskEnterCritical(void);
+extern void vTaskExitCritical(void);
 #define portENTER_CRITICAL()        vTaskEnterCritical()
 #define portEXIT_CRITICAL()         vTaskExitCritical()
 
-// Cleaner and preferred solution allows nested interrupts disabling and restoring via local registers or stack.
-// They can be called from interrupts too.
-static inline unsigned portENTER_CRITICAL_NESTED() { unsigned state = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL); portbenchmarkINTERRUPT_DISABLE(); return state; }
-#define portEXIT_CRITICAL_NESTED(state)   do { portbenchmarkINTERRUPT_RESTORE(state); XTOS_RESTORE_JUST_INTLEVEL(state); } while (0)
+// These allow nested interrupt disabling and restoring via local registers or stack.
+// They can be called from interrupts context.
+static inline uint32_t
+portENTER_CRITICAL_NESTED(void)
+{
+	uint32_t state;
+
+#if XCHAL_HAVE_INTERRUPTS
+	state = XT_RSIL (15);
+#else
+	state = 0;
+#endif
+	portbenchmarkINTERRUPT_DISABLE ();
+	return state;
+}
+
+static inline void
+portEXIT_CRITICAL_NESTED(uint32_t state)
+{
+	portbenchmarkINTERRUPT_RESTORE (state);
+#if XCHAL_HAVE_INTERRUPTS
+	XT_WSR_PS (state);
+	XT_RSYNC ();
+#endif
+}
 
 // These FreeRTOS versions are similar to the nested versions above
 #define portSET_INTERRUPT_MASK_FROM_ISR()            portENTER_CRITICAL_NESTED()
@@ -147,43 +180,19 @@ void _frxt_setup_switch( void );
 		_frxt_setup_switch();			\
 	}
 
+/* Tickless idle */
+#if ( configUSE_TICKLESS_IDLE != 0 )
+#ifndef portSUPPRESS_TICKS_AND_SLEEP
+extern void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime );
+#define portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime )	vPortSuppressTicksAndSleep( xExpectedIdleTime )
+#endif
+#endif
+
 /*-----------------------------------------------------------*/
 
 /* Task function macros as described on the FreeRTOS.org WEB site. */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters ) void vFunction( void *pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters ) void vFunction( void *pvParameters )
-
-// When coprocessors are defined, we to maintain a pointer to coprocessors area.
-// We currently use a hack: redefine field xMPU_SETTINGS in TCB block as a structure that can hold:
-// MPU wrappers, coprocessor area pointer, trace code structure, and more if needed.
-// The field is normally used for memory protection. FreeRTOS should create another general purpose field.
-typedef struct {
-	#if XCHAL_CP_NUM > 0
-	volatile StackType_t* coproc_area; // Pointer to coprocessor save area; MUST BE FIRST
-	#endif
-
-	#if portUSING_MPU_WRAPPERS
-	// Define here mpu_settings, which is port dependent
-	int mpu_setting; // Just a dummy example here; MPU not ported to Xtensa yet
-	#endif
-
-	#if configUSE_TRACE_FACILITY_2
-	struct {
-		// Cf. porttraceStamp()
-		int taskstamp;        /* Stamp from inside task to see where we are */
-		int taskstampcount;   /* A counter usually incremented when we restart the task's loop */
-	} porttrace;
-	#endif
-} xMPU_SETTINGS;
-
-// Main hack to use MPU_wrappers even when no MPU is defined (warning: mpu_setting should not be accessed; otherwise move this above xMPU_SETTINGS)
-#if (XCHAL_CP_NUM > 0 || configUSE_TRACE_FACILITY_2) && !portUSING_MPU_WRAPPERS   // If MPU wrappers not used, we still need to allocate coproc area
-	#undef portUSING_MPU_WRAPPERS
-	#define portUSING_MPU_WRAPPERS 1   // Enable it to allocate coproc area
-	#define MPU_WRAPPERS_H             // Override mpu_wrapper.h to disable unwanted code
-	#define PRIVILEGED_FUNCTION
-	#define PRIVILEGED_DATA
-#endif
 
 // porttrace
 #if configUSE_TRACE_FACILITY_2
