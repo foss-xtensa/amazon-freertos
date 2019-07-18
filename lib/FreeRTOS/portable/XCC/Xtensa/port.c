@@ -53,6 +53,10 @@
 #include <stdlib.h>
 
 #include <xtensa/hal.h>
+#include <xtensa/config/core.h>
+#if XCHAL_HAVE_INTERRUPTS
+#include <xtensa/tie/xt_interrupt.h>
+#endif
 
 #include "xtensa_api.h"
 #include "xtensa_rtos.h"

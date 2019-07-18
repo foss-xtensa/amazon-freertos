@@ -1508,6 +1508,13 @@ handler, so those 4 registers are available for scratch.
 The code is optimized to avoid unaligned branches and minimize cache misses.
 --------------------------------------------------------------------------------
 */
+/* Tools older than RG.12 may not have these defined */
+#ifndef PS_OWB_SHIFT
+#define PS_OWB_SHIFT    8
+#endif
+#ifndef PS_OWB_BITS
+#define PS_OWB_BITS     4
+#endif
 
     .align  4
     .global _xt_alloca_exc

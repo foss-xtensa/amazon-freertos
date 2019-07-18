@@ -30,6 +30,9 @@
 
 #include <xtensa/config/core.h>
 #include <xtensa/core-macros.h>
+#if XCHAL_HAVE_INTERRUPTS
+#include <xtensa/tie/xt_interrupt.h>
+#endif
 
 #include "xtensa_api.h"
 
