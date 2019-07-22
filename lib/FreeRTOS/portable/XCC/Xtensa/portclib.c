@@ -47,7 +47,22 @@ int32_t _xclib_use_mt = 1;
 void
 _Mtxinit(_Rmtx * mtx)
 {
+    // There is a little problem here with recursion. At startup _Initlocks()
+    // is called (within xclib) which attempts to create all the locks which
+    // comes here and can result in a call to malloc() which can try to lock
+    // access to the heap which results in another call to _Initlocks(). This
+    // infinite recursion must be avoided. What we do here is temporarily set
+    // the _xclib_use_mt to zero so that recursive calls to _Initlocks() will
+    // become nops. This allows the xSemaphoreCreateRecursiveMutex() function
+    // to call malloc() safely.
+    // Note that we could have used statically allocated mutexes instead but
+    // that requires configSUPPORT_STATIC_ALLOCATION to be defined which in
+    // turn requires other data such as idle task TCB/stack, timer task TCB/
+    // stack to be statically defined.
+
+    _xclib_use_mt = 0;
     *mtx = xSemaphoreCreateRecursiveMutex();
+    _xclib_use_mt = 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -122,7 +137,7 @@ vPortClibInit(void)
 void
 _reclaim_reent(void * ptr)
 {
-	(void ) ptr;	/* Avoid compiler warning */
+    (void ) ptr;    /* Avoid compiler warning */
 }
 
 #endif /* XSHAL_CLIB == XTHAL_CLIB_XCLIB */
