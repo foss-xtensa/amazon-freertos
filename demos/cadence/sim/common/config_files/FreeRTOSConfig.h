@@ -108,13 +108,13 @@
 #define configUSE_TICK_HOOK				1
 #endif
 
-#define configTICK_RATE_HZ				( 50 )
+#define configTICK_RATE_HZ				( 1000 )
 
 /* Use port-defined tickless idle */
 #define configUSE_TICKLESS_IDLE 		2
 
 /* Default clock rate for simulator */
-#define configCPU_CLOCK_HZ				2000000
+#define configCPU_CLOCK_HZ				50000000
 
 /* This has impact on speed of search for highest priority */
 #ifdef SMALL_TEST
@@ -218,7 +218,7 @@
 /* Test FreeRTOS timers (with timer task) and more. */
 /* Some files don't compile if this flag is disabled */
 #define configUSE_TIMERS                    1
-#define configTIMER_TASK_PRIORITY           1
+#define configTIMER_TASK_PRIORITY           ( configMAX_PRIORITIES - 1 )
 #define configTIMER_QUEUE_LENGTH            10
 #define configTIMER_TASK_STACK_DEPTH        configMINIMAL_STACK_SIZE
 
