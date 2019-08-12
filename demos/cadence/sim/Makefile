@@ -98,7 +98,6 @@ mkdir : $(BLDDIR)/.mkdir
 $(BLDDIR)/.mkdir :
 	@$(MKPATH) $(BLDDIR)
 	@echo "" > $@
-	-$(CP) $(subst /,$(S),$(CONFIGDIR)/xtensa-elf/include/sys/reent.h) $(subst /,$(S),$(BLDDIR)/reent.h)
 
 $(EXE) : $(OBJ_FILES) $(OSLIB)
 	$(CC) $(CCFLAGS) $(INCS) -o $@ $^ -mlsp=$(LSP) $(LDFLAGS)
