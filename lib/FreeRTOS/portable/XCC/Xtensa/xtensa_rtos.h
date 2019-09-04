@@ -207,6 +207,19 @@ extern  volatile XT_INTEXC_HOOK _xt_intexc_hooks[XT_INTEXC_HOOK_NUM];
 
 /*******************************************************************************
 
+Define a debug exception cause for XEA2. This is needed to reserve an entry
+in the exception table for a user-defined handler, and also for registering
+a user handler. Must use one of the unused/reserved exception causes.
+
+*******************************************************************************/
+
+#ifndef EXCCAUSE_DEBUG
+#define EXCCAUSE_DEBUG          21
+#endif
+
+
+/*******************************************************************************
+
 CONVENIENCE INCLUSIONS.
 
 Ensures RTOS specific files need only include this one Xtensa-generic header.
@@ -227,8 +240,8 @@ Xtensa Port Version.
 
 *******************************************************************************/
 
-#define XTENSA_PORT_VERSION             2.0
-#define XTENSA_PORT_VERSION_STRING      "2.0"
+#define XTENSA_PORT_VERSION             2.01
+#define XTENSA_PORT_VERSION_STRING      "2.01"
 
 #endif /* XTENSA_RTOS_H */
 

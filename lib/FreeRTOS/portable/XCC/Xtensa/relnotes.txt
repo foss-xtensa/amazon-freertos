@@ -1,4 +1,14 @@
 
+Notes for Version 2.01
+----------------------
+
+- Modified debug exception handling to allow user-supplied handler to
+  be installed. The user handler can be a C function and is installed
+  like so -
+
+    xt_set_exception_handler( EXCCAUSE_DEBUG, dbg_handler );
+
+
 Notes for version 2.0
 ---------------------
 

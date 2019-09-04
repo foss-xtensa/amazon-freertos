@@ -349,6 +349,8 @@ _xt_intexc_hooks:
 /*
 --------------------------------------------------------------------------------
 Debug Exception.
+Setup like a normal exception and jump to exception dispatch. Keep minimal code
+at the vector itself to avoid overflowing the memory segment allocated to it.
 --------------------------------------------------------------------------------
 */
 
@@ -361,25 +363,48 @@ Debug Exception.
 
 _DebugExceptionVector:
 
+    wsr     a0, EXCSAVE+XCHAL_DEBUGLEVEL    /* Save a0 */
+    call0   _xt_debug_exc
+
+    .end        literal_prefix
+
+    /* The remaining code goes into the .text section. */
+
+    .text
+    .local      _xt_debug_exc
+    .align      4
+
+_xt_debug_exc:
+
+    /* We're trying to treat this like an exception, but that doesn't */
+    /* work if this happened inside exception or Level 1 interrupt    */
+    /* dispatch code. If PS.EXCM is set, treat this as a fatal error. */
+
+    rsr     a0, EPS+XCHAL_DEBUGLEVEL
+    bbsi.l  a0, PS_EXCM_SHIFT, .L1
+
+    rsr     a0, EXCSAVE+XCHAL_DEBUGLEVEL    /* retrieve original a0 */
+    wsr     a0, EXCSAVE_1                   /* save a0 for _xt_user_exc */
+    movi    a0, EXCCAUSE_DEBUG
+    wsr     a0, EXCCAUSE                    /* set exception 'cause' */
+    rsr     a0, EPC+XCHAL_DEBUGLEVEL
+    wsr     a0, EPC_1                       /* save EPC for _xt_user_exc */
+    rsr     a0, EPS+XCHAL_DEBUGLEVEL
+    addi    a0, a0, PS_EXCM
+    wsr     a0, PS                          /* save EPS for _xt_user_exc */
+    rsync
+    call0   _xt_user_exc                    /* jump to exception dispatch */
+
+.L1:
     #ifdef XT_SIMULATOR
-    /*
-    In the simulator, let the debugger (if any) handle the debug exception,
-    or simply stop the simulation:
-    */
+    rsr     a0, EXCSAVE+XCHAL_DEBUGLEVEL    /* retrieve original a0 */
     wsr     a2, EXCSAVE+XCHAL_DEBUGLEVEL    /* save a2 where sim expects it */
     movi    a2, SYS_gdb_enter_sktloop
     simcall                                 /* have ISS handle debug exc. */
-    #elif 0 /* change condition to 1 to use the HAL minimal debug handler */
-    wsr     a3, EXCSAVE+XCHAL_DEBUGLEVEL
-    movi    a3, xthal_debugexc_defhndlr_nw  /* use default debug handler */
-    jx      a3
     #else
-    wsr     a0, EXCSAVE+XCHAL_DEBUGLEVEL    /* save original a0 somewhere */
     call0   _xt_panic                       /* does not return */
-    rfi     XCHAL_DEBUGLEVEL                /* make a0 point here not later */
+    rfi     XCHAL_DEBUGLEVEL
     #endif
-
-    .end        literal_prefix
 
 #endif
 
