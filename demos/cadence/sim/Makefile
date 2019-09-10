@@ -26,10 +26,10 @@ CWDIR       = $(subst /,$(S),$(CURDIR))
 DROOT       = $(CWDIR)
 SRCDIR      = $(DROOT)$(S)common$(S)application_code$(S)cadence_code
 CFGDIR      = $(DROOT)$(S)common$(S)config_files
-OSROOT      = $(abspath $(DROOT)$(S)..$(S)..$(S)..$(S)lib$(S)FreeRTOS$(S)portable$(S)XCC$(S)Xtensa)
+OSROOT      = $(abspath $(DROOT)$(S)..$(S)..$(S)..$(S)freertos_kernel$(S)portable$(S)XCC$(S)Xtensa)
 BLDROOT     = $(DROOT)$(S)build
 BLDDIR      = $(BLDROOT)$(S)$(XT_CORE)
-OSINCDIR    = $(abspath $(DROOT)$(S)..$(S)..$(S)..$(S)lib$(S)include)
+OSINCDIR    = $(abspath $(DROOT)$(S)..$(S)..$(S)..$(S)freertos_kernel$(S)include)
 
 # Source files
 

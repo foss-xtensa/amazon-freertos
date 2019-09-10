@@ -20,7 +20,7 @@ include $(CONFIGDIR)/misc/hostenv.mk
 # Source code and build locations
 
 SRCROOT     = $(subst /,$(S),$(CURDIR))
-TSTROOT     = $(abspath $(SRCROOT)$(S)..$(S)..$(S)..$(S)..$(S)..$(S)demos$(S)cadence$(S)sim$(SMALL))
+TSTROOT     = $(abspath $(SRCROOT)$(S)..$(S)..$(S)..$(S)..$(S)demos$(S)cadence$(S)sim$(SMALL))
 BLDROOT     = $(TSTROOT)$(S)build
 BLDDIR      = $(BLDROOT)$(S)$(XT_CORE)
 
@@ -57,8 +57,7 @@ DFLAGS      = -DXT_BOARD
 endif
 
 IFLAGS      = \
-  -I$(FR_SRCDIR)$(S)..$(S)include -I$(FR_SRCDIR)$(S)..$(S)include$(S)private \
-  -I$(XT_SRCDIR) -I$(TSTROOT)$(S)common$(S)config_files -I$(BLDDIR)
+  -I$(FR_SRCDIR)$(S)include -I$(XT_SRCDIR) -I$(TSTROOT)$(S)common$(S)config_files -I$(BLDDIR)
 
 CSTD        = -std=c99
 CFLAGS      = -O2 -g
