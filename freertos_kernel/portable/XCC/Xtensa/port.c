@@ -340,7 +340,8 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
         }
         else
         {
-            xt_set_ccompare( XT_TIMER_INDEX, xt_tick_cycles - ((cnt2 - cnt1) % xt_tick_cycles) + cnt2 );
+            uint32_t tmp = xt_tick_cycles - ((cnt2 - cnt1) % xt_tick_cycles);
+            xt_set_ccompare( XT_TIMER_INDEX, tmp + xthal_get_ccount() );
         }
 
         // Step the tick count forward by the number of ticks that actually
