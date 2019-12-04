@@ -153,7 +153,7 @@
 #endif
 
 #define configMAX_TASK_NAME_LEN			( 24 )
-#define configUSE_TRACE_FACILITY		0		/* Used by vTaskList in main.c */
+#define configUSE_TRACE_FACILITY		1		/* Used by vTaskList in main.c */
 #define configUSE_STATS_FORMATTING_FUNCTIONS	0	/* Used by vTaskList in main.c */
 #define configUSE_TRACE_FACILITY_2      0		/* Provided by Xtensa port patch */
 #define configBENCHMARK					0		/* Provided by Xtensa port patch */
@@ -232,6 +232,10 @@
 #define INCLUDE_eTaskGetState               1
 #define configUSE_QUEUE_SETS                1
 #endif
+
+/* Enable runtime stats */
+#define configGENERATE_RUN_TIME_STATS 1
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() do {} while (0)
 
 /* Specific config for XTENSA (these can be deleted and they will take default values) */
 
