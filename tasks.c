@@ -2984,6 +2984,34 @@ BaseType_t xSwitchRequired = pdFALSE;
 #endif /* configUSE_APPLICATION_TASK_TAG */
 /*-----------------------------------------------------------*/
 
+#if ( configGENERATE_RUN_TIME_STATS == 1 )
+static void updateCurrentTaskRunTimeCounter(void)
+{
+#ifdef portALT_GET_RUN_TIME_COUNTER_VALUE
+	portALT_GET_RUN_TIME_COUNTER_VALUE( ulTotalRunTime );
+#else
+	ulTotalRunTime = portGET_RUN_TIME_COUNTER_VALUE();
+#endif
+
+	/* Add the amount of time the task has been running to the
+	   accumulated time so far.  The time the task started running was
+	   stored in ulTaskSwitchedInTime.  Note that there is no overflow
+	   protection here so count values are only valid until the timer
+	   overflows.  The guard against negative values is to protect
+	   against suspect run time stat counter implementations - which
+	   are provided by the application, not the kernel. */
+	if( ulTotalRunTime > ulTaskSwitchedInTime )
+	{
+		pxCurrentTCB->ulRunTimeCounter += ( ulTotalRunTime - ulTaskSwitchedInTime );
+	}
+	else
+	{
+		mtCOVERAGE_TEST_MARKER();
+	}
+	ulTaskSwitchedInTime = ulTotalRunTime;
+}
+#endif
+
 void vTaskSwitchContext( void )
 {
 	if( uxSchedulerSuspended != ( UBaseType_t ) pdFALSE )
@@ -2998,30 +3026,7 @@ void vTaskSwitchContext( void )
 		traceTASK_SWITCHED_OUT();
 
 		#if ( configGENERATE_RUN_TIME_STATS == 1 )
-		{
-			#ifdef portALT_GET_RUN_TIME_COUNTER_VALUE
-				portALT_GET_RUN_TIME_COUNTER_VALUE( ulTotalRunTime );
-			#else
-				ulTotalRunTime = portGET_RUN_TIME_COUNTER_VALUE();
-			#endif
-
-			/* Add the amount of time the task has been running to the
-			accumulated time so far.  The time the task started running was
-			stored in ulTaskSwitchedInTime.  Note that there is no overflow
-			protection here so count values are only valid until the timer
-			overflows.  The guard against negative values is to protect
-			against suspect run time stat counter implementations - which
-			are provided by the application, not the kernel. */
-			if( ulTotalRunTime > ulTaskSwitchedInTime )
-			{
-				pxCurrentTCB->ulRunTimeCounter += ( ulTotalRunTime - ulTaskSwitchedInTime );
-			}
-			else
-			{
-				mtCOVERAGE_TEST_MARKER();
-			}
-			ulTaskSwitchedInTime = ulTotalRunTime;
-		}
+		updateCurrentTaskRunTimeCounter();
 		#endif /* configGENERATE_RUN_TIME_STATS */
 
 		/* Check for stack overflow, if configured. */
@@ -3672,6 +3677,12 @@ static void prvCheckTasksWaitingTermination( void )
 
 		#if ( configGENERATE_RUN_TIME_STATS == 1 )
 		{
+			if (pxTCB == pxCurrentTCB)
+			{
+				taskENTER_CRITICAL();
+				updateCurrentTaskRunTimeCounter();
+				taskEXIT_CRITICAL();
+			}
 			pxTaskStatus->ulRunTimeCounter = pxTCB->ulRunTimeCounter;
 		}
 		#else
