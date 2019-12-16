@@ -3635,7 +3635,12 @@ static void prvCheckTasksWaitingTermination( void )
 
 		#if ( configGENERATE_RUN_TIME_STATS == 1 )
 		{
-			updateCurrentTaskRunTimeCounter();
+			if (pxTCB == pxCurrentTCB)
+			{
+				taskENTER_CRITICAL();
+				updateCurrentTaskRunTimeCounter();
+				taskEXIT_CRITICAL();
+			}
 			pxTaskStatus->ulRunTimeCounter = pxTCB->ulRunTimeCounter;
 		}
 		#else
@@ -5078,7 +5083,6 @@ TickType_t uxReturn;
 #if( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
 	TickType_t xTaskGetIdleRunTimeCounter( void )
 	{
-		updateCurrentTaskRunTimeCounter();
 		return xIdleTaskHandle->ulRunTimeCounter;
 	}
 #endif
