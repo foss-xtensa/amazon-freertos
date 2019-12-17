@@ -152,7 +152,7 @@
 #define configTOTAL_HEAP_SIZE			( ( size_t ) (256 * 1024) )
 #endif
 
-#define configMAX_TASK_NAME_LEN			( 8 )
+#define configMAX_TASK_NAME_LEN			( 32 )
 #define configUSE_TRACE_FACILITY		1		/* Used by vTaskList in main.c */
 #define configUSE_STATS_FORMATTING_FUNCTIONS	0	/* Used by vTaskList in main.c */
 #define configUSE_TRACE_FACILITY_2      0		/* Provided by Xtensa port patch */

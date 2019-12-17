@@ -26,7 +26,7 @@
 
 #define MPUSETTINGS_SIZE        0x00                        /* Size of MPU settings struct */
 #define TOS_OFFSET              0x00                        /* pxTCB->pxTopOfStack offset  */
-#define EOS_OFFSET              (0x3C + MPUSETTINGS_SIZE)   /* pxTCB->pxEndOfStack offset  */
+#define EOS_OFFSET              (0x54 + MPUSETTINGS_SIZE)   /* pxTCB->pxEndOfStack offset  */
 
     .extern pxCurrentTCB
 
