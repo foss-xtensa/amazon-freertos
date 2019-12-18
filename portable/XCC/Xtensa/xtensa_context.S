@@ -51,12 +51,18 @@ NOERROR: .error "C preprocessor needed for this file: make sure its filename\
 
 
 #include "xtensa_rtos.h"
+#include "portmacro.h"
+#include <xtensa/core-macros.h>
 
 #ifdef XT_USE_OVLY
 #include <xtensa/overlay_os_asm.h>
 #endif
 
+#if portUSING_MPU_WRAPPERS
+    .section "privileged_functions"
+#else
     .text
+#endif
 
 /*******************************************************************************
 

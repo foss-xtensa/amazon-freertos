@@ -20,6 +20,11 @@ include $(CONFIGDIR)/misc/hostenv.mk
 
 # Source code and build locations
 
+# Build with MPU support
+ifeq ($(MPU),1)
+MPUFLAGS    = -DportUSING_MPU_WRAPPERS=1  -DportALIGN_SECTIONS
+endif
+
 SRCROOT     = $(subst /,$(S),$(CURDIR))
 TSTROOT     = $(abspath $(SRCROOT)$(S)..$(S)..$(S)..$(S)demos$(S)cadence$(S)sim$(SMALL))
 BLDROOT     = $(TSTROOT)$(S)build
@@ -27,14 +32,17 @@ BLDDIR      = $(BLDROOT)$(S)$(XT_CORE)
 
 FR_SRCDIR   = $(abspath $(SRCROOT)$(S)..$(S)..$(S)..$(S))
 FR_SRCDIR2  = $(FR_SRCDIR)$(S)portable$(S)MemMang
+ifeq ($(MPU),1)
+FR_SRCDIR3  = $(FR_SRCDIR)$(S)portable$(S)Common
+endif
 XT_SRCDIR   = $(SRCROOT)
 
-vpath %.c $(FR_SRCDIR) $(FR_SRCDIR2) $(XT_SRCDIR)
+vpath %.c $(FR_SRCDIR) $(FR_SRCDIR2) $(FR_SRCDIR3) $(XT_SRCDIR)
 vpath %.S $(XT_SRCDIR)
 
 # File lists
 
-FR_C_FILES  = $(notdir $(wildcard $(FR_SRCDIR)/*.c)) $(notdir $(wildcard $(FR_SRCDIR2)/*.c))
+FR_C_FILES  = $(notdir $(wildcard $(FR_SRCDIR)/*.c)) $(notdir $(wildcard $(FR_SRCDIR2)/*.c)) $(notdir $(wildcard $(FR_SRCDIR3)/*.c))
 XT_C_FILES  = $(notdir $(wildcard $(XT_SRCDIR)/*.c))
 XT_S_FILES  = $(notdir $(wildcard $(XT_SRCDIR)/*.S))
 
@@ -63,7 +71,7 @@ IFLAGS      = \
 CSTD        = -std=c99
 CFLAGS      = -O2 -g
 WFLAGS      = -Werror -Wall -Wextra
-CCFLAGS     = $(CSTD) $(CFLAGS) $(WFLAGS) -mno-coproc -mlongcalls -ffunction-sections -mno-l32r-flix $(DFLAGS)
+CCFLAGS     = $(CSTD) $(CFLAGS) $(WFLAGS) -mno-coproc -mlongcalls -ffunction-sections -mno-l32r-flix $(DFLAGS) $(MPUFLAGS)
 ASFLAGS     = $(CCFLAGS)
 
 # Include dependency rules (generated using -MD)

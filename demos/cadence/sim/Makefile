@@ -69,6 +69,14 @@ DFLAGS      = -DXT_BOARD
 LSP         = xtkc705-rt
 endif
 
+# Build with MPU support
+ifeq ($(MPU),1)
+LSPPATH = $(BLDDIR)$(S)lsp$(S)$(LSP)
+MPUFLAGS = -DportUSING_MPU_WRAPPERS=1 -DportALIGN_SECTIONS
+else
+LSPPATH = $(LSP)
+endif
+
 # Build options. Override CFLAGS from the make command line if desired.
 # NOTE: Default LDFLAGS are set up to discard unused sections so that 
 # the final exe size is minimized.
@@ -76,8 +84,13 @@ endif
 INCS        = -I$(SRCDIR) -I$(CFGDIR) -I$(OSROOT) -I$(OSINCDIR) -I$(OSINCDIR)$(S)private -I$(BLDDIR)
 DFLAGS     += -DSTANDALONE
 CFLAGS     ?= -O2 -Os -g -Wall -Werror
-CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS)
+CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS) $(MPUFLAGS)
 LDFLAGS    ?= -Wl,--gc-sections
+
+# use make DEBUG=1 to get MPU debug prints
+ifeq ($(DEBUG),1)
+CFLAGS     += -DDEBUG
+endif
 
 # include dependency rules (generated using -MD)
 
@@ -97,18 +110,32 @@ small : small_test
 
 os : $(OSLIB)
 
+SECT_PRIV := "PLACE SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) WITH_SECTION(.data)"
+
+$(LSPPATH)/.mkdir :
+	$(MKPATH) $(LSPPATH)
+	$(CP) $(CONFIGDIR)$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)memmap.xmm $(LSPPATH)
+	$(CP) $(CONFIGDIR)$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)specs $(LSPPATH)
+	echo $(SECT_PRIV) >> $(LSPPATH)$(S)memmap.xmm
+	xt-genldscripts -b $(LSPPATH)
+	@echo "" > $@
+
 $(BLDDIR)/.mkdir :
 	@$(MKPATH) $(BLDDIR)
 	@echo "" > $@
 
-$(EXE) : $(BLDDIR)/%.exe : $(BLDDIR)/%.o $(OSLIB)
-	$(CC) $(CCFLAGS) $(INCS) -o $@ $^ -mlsp=$(LSP) $(LDFLAGS)
+ifeq ($(MPU),1)
+MPULSP = $(LSPPATH)/.mkdir
+endif
+
+$(EXE) : $(BLDDIR)/%.exe : $(BLDDIR)/%.o $(OSLIB) $(MPULSP)
+	$(CC) -o $@ $< -mlsp=$(LSPPATH) $(LDFLAGS) $(OSLIB) -lxtutil
 
 $(OBJS) : $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
-	$(CC) $(CCFLAGS) $(INCS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
+	$(CC) $(CCFLAGS) $($(%*)_CFLAGS) $(INCS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
 $(OSLIB) ::
-	$(MAKE) -f $(OSROOT)$(S)Makefile all TARGET=$(TARGET) CFLAGS="$(CFLAGS)" SRCROOT=$(OSROOT) BLDROOT=$(BLDROOT)
+	$(MAKE) -f $(OSROOT)$(S)Makefile all TARGET=$(TARGET) CFLAGS="$(CFLAGS)" SRCROOT=$(OSROOT) BLDROOT=$(BLDROOT) MPU=$(MPU)
 
 example   : $(BLDDIR)/example.exe
 

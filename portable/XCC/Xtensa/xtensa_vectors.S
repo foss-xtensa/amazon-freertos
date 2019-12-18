@@ -93,6 +93,7 @@
  */
 
 #include "xtensa_rtos.h"
+#include "portmacro.h"
 
 
 #if XCHAL_HAVE_XEA2
@@ -504,8 +505,40 @@ _xt_to_alloca_exc:
 
     .align      4
 _xt_to_syscall_exc:
+#if portUSING_MPU_WRAPPERS
+    /* Handle "RAISE PRIVILEGE" SYSCALL right away */
+    beqi    a2, SYSCALL_raise_priv, do_raise_priv
+    beqi    a2, SYSCALL_is_priv, do_is_priv
+#endif
     call0   _xt_syscall_exc
     /* never returns here - call0 is used as a jump (see note at top) */
+
+#if portUSING_MPU_WRAPPERS
+do_is_priv:
+    rsr     a2, PS
+    movi    a0, 1
+    extui   a2, a2, 6, 1
+    xor     a2, a2, a0
+    j       privilege_return
+
+    /* raise privilege syscall */
+do_raise_priv:
+    rsr     a0,  PS
+    bbsi    a0,  6, raise_privilege
+    movi    a2,  1
+privilege_return:
+    rsr     a0,  EPC_1                    /* a3 = PC of 'syscall' */
+    addi    a0,  a0, 3                    /* ++PC                 */
+    wsr     a0,  EPC_1                    /* update PC            */
+    rsr     a0,  EXCSAVE_1
+    rfe
+raise_privilege:
+    movi    a2,  0xffffff3f               /* PS.RING = 0 */
+    and     a0,  a0, a2
+    wsr     a0,  PS
+    movi    a2,  0
+    j       privilege_return
+#endif
 
     #if XCHAL_CP_NUM > 0
     .align      4
@@ -630,6 +663,11 @@ _xt_user_exc:
 .L_xt_user_done:
 
     /* Restore context and return */
+
+#if portUSING_MPU_WRAPPERS
+    call0   _xt_mpu_restore
+#endif
+
     call0   _xt_context_restore
     l32i    a0, sp, XT_STK_PS               /* retrieve interruptee's PS */
     wsr     a0, PS
@@ -724,6 +762,11 @@ _xt_syscall_exc:
     l32i    a3, sp, 12
     addi    sp, sp, 16
     #else
+
+#if portUSING_MPU_WRAPPERS
+    call0   _xt_mpu_restore
+#endif
+
     call0   _xt_context_restore
     addi    sp, sp, XT_STK_FRMSZ
     #endif

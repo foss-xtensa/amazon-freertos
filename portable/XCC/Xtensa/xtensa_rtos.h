@@ -97,6 +97,7 @@ Name of RTOS (for messages).
 */
 #define XT_RTOS_NAME    FreeRTOS
 
+#define UNUSED(x)       ((void)(x))
 /*
 Check some Xtensa configuration requirements and report error if not met.
 Error messages can be customize to the RTOS port.

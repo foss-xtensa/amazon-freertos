@@ -24,6 +24,7 @@
 
 #include "xtensa_rtos.h"
 #include "asm-offsets.h"
+#include "portmacro.h"
 
     .extern pxCurrentTCB
 
@@ -44,7 +45,13 @@ port_IntStackTop:
 port_switch_flag:
     .word       0
 
+
+#if portUSING_MPU_WRAPPERS
+    .section "privileged_functions"
+#else
     .text
+#endif
+
 /*
 *******************************************************************************
 * _frxt_setup_switch
@@ -192,11 +199,15 @@ _frxt_int_exit:
     In either case there's no need to load the SP.
     */
 
+#if portUSING_MPU_WRAPPERS
+    call0   _xt_mpu_restore
+#endif
+
     /* Restore full context from interrupt stack frame */
     call0   _xt_context_restore
 
     /*
-    Must return via the exit dispatcher corresponding to the entrypoint from which
+    Must return via the exit dispatcher corresponding to the entry point from which
     this was called. Interruptee's A0, A1, PS, PC are restored and the interrupt
     stack frame is deallocated in the exit dispatcher.
     */
@@ -252,6 +263,19 @@ _frxt_dispatch:
 .L_frxt_dispatch_sol:
 
     /* Solicited stack frame. Restore minimal context and return from vPortYield(). */
+
+#if portUSING_MPU_WRAPPERS
+    movi    a2, SYSCALL_raise_priv
+    syscall
+    mov     a9, a2
+    call0   _xt_mpu_restore
+    bnez    a9, skip_lowering_priv;
+    rsr.ps  a2
+    addi    a2, a2, PS_RING(1)
+    wsr.ps  a2
+skip_lowering_priv:
+#endif
+
     l32i    a3,  sp, XT_SOL_PS
     #ifdef __XTENSA_CALL0_ABI__
     l32i    a12, sp, XT_SOL_A12
@@ -283,6 +307,10 @@ _frxt_dispatch:
     l16ui   a3, a2, XT_CPENABLE         /* a3 = saved CPENABLE value     */
     wsr     a3, CPENABLE
     #endif
+
+#if portUSING_MPU_WRAPPERS
+    call0   _xt_mpu_restore
+#endif
 
     /* Interrupt stack frame. Restore full context and return to exit dispatcher. */
     call0   _xt_context_restore

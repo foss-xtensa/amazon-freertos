@@ -461,7 +461,11 @@ _xt_coproc_exc:
 //  the coprocessor handler, then restore and return.
 //-----------------------------------------------------------------------------
 
+#if portUSING_MPU_WRAPPERS
+        .section "privileged_functions"
+#else
         .text
+#endif
         .global     _xt_coproc_exc
         .type       _xt_coproc_exc,@function
         .align      4

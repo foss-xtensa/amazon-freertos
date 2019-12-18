@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <xtensa/hal.h>
 
+#include "mpu_wrappers.h"
 #include "xtensa_context.h"
 
 
@@ -57,7 +58,7 @@ typedef void (*xt_exc_handler)(XtExcFrame *);
   of the exception frame structure see xtensa_context.h.
 -------------------------------------------------------------------------------
 */
-extern xt_exc_handler xt_set_exception_handler( uint32_t n, xt_exc_handler f );
+extern xt_exc_handler xt_set_exception_handler( uint32_t n, xt_exc_handler f ) PRIVILEGED_FUNCTION;
 
 
 /*
@@ -69,7 +70,7 @@ extern xt_exc_handler xt_set_exception_handler( uint32_t n, xt_exc_handler f );
     arg      - Argument to be passed to handler.
 -------------------------------------------------------------------------------
 */
-extern xt_handler xt_set_interrupt_handler( uint32_t n, xt_handler f, void * arg );
+extern xt_handler xt_set_interrupt_handler( uint32_t n, xt_handler f, void * arg ) PRIVILEGED_FUNCTION;
 
 
 /*
@@ -81,7 +82,7 @@ extern xt_handler xt_set_interrupt_handler( uint32_t n, xt_handler f, void * arg
   Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-extern void xt_interrupt_enable( uint32_t intnum );
+extern void xt_interrupt_enable( uint32_t intnum ) PRIVILEGED_FUNCTION;
 
 
 /*
@@ -93,7 +94,7 @@ extern void xt_interrupt_enable( uint32_t intnum );
   Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-extern void xt_interrupt_disable( uint32_t intnum );
+extern void xt_interrupt_disable( uint32_t intnum ) PRIVILEGED_FUNCTION;
 
 
 /*
@@ -107,7 +108,7 @@ extern void xt_interrupt_disable( uint32_t intnum );
 -------------------------------------------------------------------------------
 */
 uint32_t
-xt_interrupt_enabled( uint32_t intnum );
+xt_interrupt_enabled( uint32_t intnum ) PRIVILEGED_FUNCTION;
 
 
 /*
@@ -119,7 +120,7 @@ xt_interrupt_enabled( uint32_t intnum );
   Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-extern void xt_interrupt_trigger( uint32_t intnum );
+extern void xt_interrupt_trigger( uint32_t intnum ) PRIVILEGED_FUNCTION;
 
 
 /*
@@ -132,7 +133,7 @@ extern void xt_interrupt_trigger( uint32_t intnum );
 Returns: Nothing.
 -------------------------------------------------------------------------------
 */
-extern void xt_interrupt_clear( uint32_t intnum );
+extern void xt_interrupt_clear( uint32_t intnum ) PRIVILEGED_FUNCTION;
 
 
 /*

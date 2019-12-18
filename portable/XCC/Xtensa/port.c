@@ -49,6 +49,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#if portUSING_MPU_WRAPPERS
+# define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
+#endif
 
 #include <stdlib.h>
 
@@ -64,6 +67,18 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#if portUSING_MPU_WRAPPERS
+/* Configure a number of standard MPU regions that are used by all tasks. */
+extern BaseType_t prvSetupMPU( void ) PRIVILEGED_FUNCTION;
+
+/*
+ * Checks to see if being called from the context of an unprivileged task, and
+ * if so raises the privilege level and returns false - otherwise does nothing
+ * other than return true.
+ */
+BaseType_t xPortRaisePrivilege( void );
+
+#endif
 
 // Defined in xtensa_context.S.
 extern void _xt_coproc_init( void );
@@ -83,6 +98,7 @@ uint32_t port_xSchedulerRunning = 0U;
 // Interrupt nesting level.
 uint32_t port_interruptNesting  = 0U;
 
+#undef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 //-----------------------------------------------------------------------------
 // Tick timer interrupt handler.
@@ -176,6 +192,12 @@ BaseType_t xPortStartScheduler( void )
     vPortClibInit();
     #endif
 
+    #if portUSING_MPU_WRAPPERS
+    // Setup MPU
+    if (prvSetupMPU() == pdFALSE)
+       return pdFALSE;
+    #endif
+
     port_xSchedulerRunning = 1U;
 
     // Cannot be directly called from C; never returns
@@ -204,9 +226,16 @@ void vPortEndScheduler( void )
 // pxTCB->pxEndOfStack, which will then be treated as the coprocessor state
 // area pointer.
 //-----------------------------------------------------------------------------
+#if portUSING_MPU_WRAPPERS
+StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack,
+				    TaskFunction_t pxCode,
+				    void *pvParameters,
+				    BaseType_t xRunPrivileged )
+#else
 StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                     TaskFunction_t pxCode,
                                     void * pvParameters )
+#endif
 {
     StackType_t *sp, *tp;
     XtExcFrame  *frame;
@@ -244,6 +273,11 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
     // + for windowed ABI also set WOE and CALLINC (pretend task was 'call4'd).
     frame->a6 = (UBaseType_t) pvParameters;
     frame->ps = PS_UM | PS_EXCM | PS_WOE | PS_CALLINC(1);
+    #endif
+    #if portUSING_MPU_WRAPPERS
+    if(!xRunPrivileged) {
+       frame->ps |= (1 << PS_RING_SHIFT);
+    }
     #endif
 
     #ifdef XT_USE_SWPRI
@@ -371,3 +405,21 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 }
 #endif
 
+#if portUSING_MPU_WRAPPERS
+extern void vPortResetPrivilege(BaseType_t previous);
+void vPortEnterCritical( void )
+{
+  BaseType_t xRunningPrivileged = xPortRaisePrivilege();
+
+  vTaskEnterCritical();
+  vPortResetPrivilege( xRunningPrivileged );
+}
+
+void vPortExitCritical( void )
+{
+  BaseType_t xRunningPrivileged = xPortRaisePrivilege();
+
+  vTaskExitCritical();
+  vPortResetPrivilege( xRunningPrivileged );
+}
+#endif
