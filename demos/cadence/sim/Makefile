@@ -13,6 +13,7 @@ TARGET      = sim
 
 CC          = xt-xcc
 AS          = xt-xcc
+ISS         = xt-run
 XT_CORE     = $(patsubst %-params,%,$(notdir $(shell xt-xcc --show-config=core)))
 CONFIGDIR   = $(shell xt-xcc --show-config=config)
 
@@ -84,7 +85,10 @@ LDFLAGS    ?= -Wl,--gc-sections
 
 # Targets
 
-all : example perf_test xt_coproc xt_alloca xt_clib xt_intr
+all : $(EXE)
+check : $(addprefix check_,$(notdir $(EXE)))
+check_% : $(BLDDIR)/%
+	$(ISS) --exit_with_target_code $<
 
 # NOTE: The small test needs its own version of the FreeRTOS library.
 # So don't club it with the other tests, it has to be built on its own.
@@ -134,6 +138,7 @@ help :
 	@echo     "make all              -- build all tests for simulator"
 	@echo     "make all TARGET=ml605 -- build all tests for ML605 FPGA board"
 	@echo     "make all TARGET=kc705 -- build all tests for KC705 FPGA board"
+	@echo     "make check            -- build and run all tests on simulator"
 	@echo     "make clean            -- Clean build for current config"
 	@echo     "make clean_all        -- Clean build for all configs"
 
