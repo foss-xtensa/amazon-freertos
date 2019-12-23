@@ -10,6 +10,7 @@ SMALL       =
 CC          = xt-xcc
 AS          = xt-xcc
 AR          = xt-ar
+ISS         = xt-run
 XT_CORE     = $(patsubst %-params,%,$(notdir $(shell xt-xcc --show-config=core)))
 CONFIGDIR   = $(shell xt-xcc --show-config=config)
 
@@ -39,7 +40,7 @@ XT_S_FILES  = $(notdir $(wildcard $(XT_SRCDIR)/*.S))
 
 # List of all .o files that will go into the library
 
-LIB_C_O     = $(patsubst %.c,%.o,$(XT_C_FILES) $(FR_C_FILES))
+LIB_C_O     = $(patsubst %.c,%.o,$(filter-out asm-offsets.c,$(XT_C_FILES) $(FR_C_FILES)))
 LIB_S_O     = $(patsubst %.S,%.o,$(XT_S_FILES))
 LIB_O_LIST  = $(addprefix $(BLDDIR)/,$(LIB_C_O) $(LIB_S_O))
 
@@ -77,8 +78,15 @@ $(BLDDIR)/.mkdir :
 	@$(MKPATH) $(BLDDIR)
 	@echo "" > $@
 
+$(LIB_O_LIST) : $(BLDDIR)/asm-offsets.h
+
 $(OSLIB) : $(LIB_O_LIST)
 	$(AR) -rs $@ $^
+
+$(BLDDIR)/asm-offsets.h : asm-offsets.c $(BLDDIR)/.mkdir
+	$(CC) $(CCFLAGS) $(IFLAGS) -MD -MF $(subst .h,.d,$@) -MT $@ -ffunction-sections -fdata-sections -Wl,--gc-sections -o $@.exe $<
+	$(ISS) $@.exe > $@
+	rm -f $@.exe
 
 $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
 	$(CC) $(CCFLAGS) $(IFLAGS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
