@@ -23,10 +23,7 @@
  */
 
 #include "xtensa_rtos.h"
-
-#define MPUSETTINGS_SIZE        0x00                        /* Size of MPU settings struct */
-#define TOS_OFFSET              0x00                        /* pxTCB->pxTopOfStack offset  */
-#define EOS_OFFSET              (0x3C + MPUSETTINGS_SIZE)   /* pxTCB->pxEndOfStack offset  */
+#include "asm-offsets.h"
 
     .extern pxCurrentTCB
 
@@ -116,7 +113,7 @@ _frxt_int_enter:
     movi    a2,  pxCurrentTCB
     l32i    a2,  a2, 0                  /* a2 = current TCB                */
     beqz    a2,  1f
-    s32i    a1,  a2, TOS_OFFSET         /* pxCurrentTCB->pxTopOfStack = SP */
+    s32i    a1,  a2, TCB_TOP_OF_STACK_OFF         /* pxCurrentTCB->pxTopOfStack = SP */
     movi    a1,  port_IntStackTop       /* a1 = top of intr stack          */
 
 .Lnested:
@@ -157,7 +154,7 @@ _frxt_int_exit:
     movi    a2,  pxCurrentTCB
     l32i    a2,  a2, 0                  /* a2 = current TCB                */
     beqz    a2,  1f                     /* no task ? go to dispatcher      */
-    l32i    a1,  a2, TOS_OFFSET         /* SP = pxCurrentTCB->pxTopOfStack */
+    l32i    a1,  a2, TCB_TOP_OF_STACK_OFF         /* SP = pxCurrentTCB->pxTopOfStack */
 
     movi    a2,  port_switch_flag       /* address of switch flag          */
     l32i    a3,  a2, 0                  /* a3 = port_switch_flag           */
@@ -245,7 +242,7 @@ _frxt_dispatch:
     call4   vTaskSwitchContext  // Get next TCB to resume
     #endif
     l32i    a3,  a2, 0
-    l32i    sp,  a3, TOS_OFFSET     /* SP = next_TCB->pxTopOfStack */
+    l32i    sp,  a3, TCB_TOP_OF_STACK_OFF     /* SP = next_TCB->pxTopOfStack */
     s32i    a3,  a2, 0
 
     /* Determine the type of stack frame. */
@@ -282,7 +279,7 @@ _frxt_dispatch:
     /* Restore CPENABLE from task's co-processor save area. */
     movi    a3, pxCurrentTCB
     l32i    a3, a3, 0
-    l32i    a2, a3, EOS_OFFSET          /* a2 = base of coproc save area */
+    l32i    a2, a3, TCB_END_OF_STACK_OFF          /* a2 = base of coproc save area */
     l16ui   a3, a2, XT_CPENABLE         /* a3 = saved CPENABLE value     */
     wsr     a3, CPENABLE
     #endif
@@ -371,11 +368,11 @@ vPortYield:
     movi    a3,  0
     l32i    a2,  a2, 0                  /* a2 = pxCurrentTCB                */
     s32i    a3,  sp, XT_SOL_EXIT        /* 0 to flag as solicited frame     */
-    s32i    sp,  a2, TOS_OFFSET         /* pxCurrentTCB->pxTopOfStack = SP  */
+    s32i    sp,  a2, TCB_TOP_OF_STACK_OFF         /* pxCurrentTCB->pxTopOfStack = SP  */
 
     #if XCHAL_CP_NUM > 0
     /* Clear CPENABLE, also in task's co-processor state save area. */
-    l32i    a2,  a2, EOS_OFFSET         /* a2 = pxCurrentTCB->cp_state      */
+    l32i    a2,  a2, TCB_END_OF_STACK_OFF         /* a2 = pxCurrentTCB->cp_state      */
     movi    a3,  0
     wsr     a3,  CPENABLE
     beqz    a2,  1f
@@ -418,7 +415,7 @@ vPortYieldFromInt:
     /* Save CPENABLE in task's co-processor save area, and clear CPENABLE.  */
     movi    a3, pxCurrentTCB            /* cp_state =                       */
     l32i    a3, a3, 0
-    l32i    a2, a3, EOS_OFFSET
+    l32i    a2, a3, TCB_END_OF_STACK_OFF
 
     rsr     a3, CPENABLE
     s16i    a3, a2, XT_CPENABLE         /* cp_state->cpenable = CPENABLE;   */
@@ -453,7 +450,7 @@ _xt_task_start:
     l32i    a3, a3, 0
     l32i    a0, sp, XT_STK_A0               /* retrieve interruptee's A0        */
     l32i    sp, sp, XT_STK_A1               /* remove interrupt stack frame     */
-    s32i    sp, a3, EOS_OFFSET              /* TCB->pxEndOfStack = CP save area */
+    s32i    sp, a3, TCB_END_OF_STACK_OFF              /* TCB->pxEndOfStack = CP save area */
     rsync                                   /* ensure PS and EPC written        */
     rfe                                     /* PS.EXCM is cleared               */
 
@@ -488,7 +485,7 @@ _xt_task_coproc_state:
     movi    a15, pxCurrentTCB
     l32i    a15, a15, 0                 /* && pxCurrentTCB != 0) {                      */
     beqz    a15, 2f
-    l32i    a15, a15, EOS_OFFSET        /* a15 = pxCurrentTCB->pxEndOfStack             */
+    l32i    a15, a15, TCB_END_OF_STACK_OFF        /* a15 = pxCurrentTCB->pxEndOfStack             */
     ret
 1:
     movi    a15, 0

@@ -122,6 +122,9 @@ xt_clib   : $(BLDDIR)/xt_clib.exe
 
 xt_intr   : $(BLDDIR)/xt_intr.exe
 
+# xt_clib uses asm-offsets.h, which is build as a side effect of $(OSLIB)
+$(BLDDIR)/xt_clib.o : $(OSLIB)
+
 small_test : $(BLDDIR)/.mkdir
 	$(MAKE) --no-print-directory $(BLDDIR)/small_test.exe CFLAGS="$(CFLAGS) -DSMALL_TEST -DXT_USE_THREAD_SAFE_CLIB=0"
 

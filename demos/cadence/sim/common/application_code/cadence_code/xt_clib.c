@@ -39,6 +39,7 @@
 #include "task.h"
 #include "queue.h"
 
+#include "asm-offsets.h"
 #include <testcommon.h>
 
 #if (XT_USE_THREAD_SAFE_CLIB > 0)
@@ -60,12 +61,6 @@
 
 // Number of concurrent tasks.
 #define NTASKS                  4
-
-// Byte offset of C context pointer inside TCB. We cannot detect this at
-// compile time because the TCB struct is not exposed to user code.
-// If the TCB changes in size then manually adjust this offset to match.
-#define IMPURE_PTR_OFFSET       0x4C
-
 
 uint32_t     result[NTASKS];
 TaskHandle_t Task_TCB[NTASKS];
@@ -91,7 +86,7 @@ void Task_Func( void * pdata )
         {
             // Note that _impure_ptr (newlib) is redefined as _reent_ptr in the case of
             // xclib.
-            if ( _impure_ptr != (void *)(&pxCurrentTCB[IMPURE_PTR_OFFSET/4]) )
+            if ( _impure_ptr != (void *)(&pxCurrentTCB[TCB_IMPURE_PTR_OFF / 4]) )
             {
                 // A failure might mean that the hack definition of TCB in this file, xt_clib.c,
                 // is out of date with respect to the official definition in tasks.c.
