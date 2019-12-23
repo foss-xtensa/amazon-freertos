@@ -71,22 +71,19 @@ ASFLAGS     = $(CCFLAGS)
 
 # Targets
 
-all : mkdir $(OSLIB)
-
-mkdir : $(BLDDIR)/.mkdir
+all : $(OSLIB)
 
 $(BLDDIR)/.mkdir :
 	@$(MKPATH) $(BLDDIR)
 	@echo "" > $@
-	-$(CP) $(CONFIGDIR)/xtensa-elf/include/sys/reent.h $(BLDDIR)/reent.h
 
 $(OSLIB) : $(LIB_O_LIST)
 	$(AR) -rs $@ $^
 
-$(BLDDIR)/%.o : %.c
+$(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
 	$(CC) $(CCFLAGS) $(IFLAGS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
-$(BLDDIR)/%.o : %.S
+$(BLDDIR)/%.o : %.S $(BLDDIR)/.mkdir
 	$(CC) $(ASFLAGS) $(IFLAGS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
 clean :
@@ -95,5 +92,5 @@ clean :
 clean_all :
 	$(RM_R) $(BLDROOT)
 
-.PHONY : all mkdir clean clean_all
+.PHONY : all clean clean_all
 

@@ -41,9 +41,9 @@ TEST_FILES  = \
     xt_clib.c            \
     xt_intr.c
 
+EXE         = $(addprefix $(BLDDIR)/,$(patsubst %.c,%.exe,$(TEST_FILES)))
+OBJS        = $(addprefix $(BLDDIR)/,$(patsubst %.c,%.o,$(TEST_FILES)))
 SRC_FILES   = $(TEST_FILES)
-
-OBJ_FILES   = $(addprefix $(BLDDIR)/,$(patsubst %.c,%.o,$(notdir $(SRC_FILES))))
 
 # Search paths
 
@@ -73,7 +73,7 @@ endif
 # the final exe size is minimized.
 
 INCS        = -I$(SRCDIR) -I$(CFGDIR) -I$(OSROOT) -I$(OSINCDIR) -I$(OSINCDIR)$(S)private -I$(BLDDIR)
-
+DFLAGS     += -DSTANDALONE
 CFLAGS     ?= -O2 -Os -g -Wall -Werror
 CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS)
 LDFLAGS    ?= -Wl,--gc-sections
@@ -84,28 +84,26 @@ LDFLAGS    ?= -Wl,--gc-sections
 
 # Targets
 
-all : mkdir example perf_test xt_coproc xt_alloca xt_clib xt_intr
+all : example perf_test xt_coproc xt_alloca xt_clib xt_intr
 
 # NOTE: The small test needs its own version of the FreeRTOS library.
 # So don't club it with the other tests, it has to be built on its own.
 
-small : mkdir small_test
+small : small_test
 
-os  : mkdir $(OSLIB)
-
-mkdir : $(BLDDIR)/.mkdir
+os : $(OSLIB)
 
 $(BLDDIR)/.mkdir :
 	@$(MKPATH) $(BLDDIR)
 	@echo "" > $@
 
-$(EXE) : $(OBJ_FILES) $(OSLIB)
+$(EXE) : $(BLDDIR)/%.exe : $(BLDDIR)/%.o $(OSLIB)
 	$(CC) $(CCFLAGS) $(INCS) -o $@ $^ -mlsp=$(LSP) $(LDFLAGS)
 
-$(BLDDIR)/%.o : %.c
+$(OBJS) : $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
 	$(CC) $(CCFLAGS) $(INCS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
-$(OSLIB) :
+$(OSLIB) ::
 	$(MAKE) -f $(OSROOT)$(S)Makefile all TARGET=$(TARGET) CFLAGS="$(CFLAGS)" SRCROOT=$(OSROOT) BLDROOT=$(BLDROOT)
 
 example   : $(BLDDIR)/example.exe
@@ -120,11 +118,8 @@ xt_clib   : $(BLDDIR)/xt_clib.exe
 
 xt_intr   : $(BLDDIR)/xt_intr.exe
 
-small_test :
+small_test : $(BLDDIR)/.mkdir
 	$(MAKE) --no-print-directory $(BLDDIR)/small_test.exe CFLAGS="$(CFLAGS) -DSMALL_TEST -DXT_USE_THREAD_SAFE_CLIB=0"
-
-$(BLDDIR)/%.exe : %.c $(OSLIB)
-	$(CC) $(CCFLAGS) $(INCS) -o $@ $^ -mlsp=$(LSP) $(LDFLAGS) -DSTANDALONE=1
 
 clean :
 	$(RM_R) $(BLDDIR)
@@ -132,7 +127,7 @@ clean :
 clean_all :
 	$(RM_R) $(BLDROOT)
 
-.PHONY : all mkdir clean clean_all example perf_test xt_coproc xt_alloca xt_clib xt_intr
+.PHONY : all clean clean_all example perf_test xt_coproc xt_alloca xt_clib xt_intr
 
 help :
 	@echo Available options:
