@@ -165,6 +165,7 @@ int main(int argc, char *argv[])
 		_exit(1);
 	}
 	vTaskStartScheduler();
+	return 0;
 }
 /*-----------------------------------------------------------*/
 
