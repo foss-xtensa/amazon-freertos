@@ -42,6 +42,10 @@ TEST_FILES  = \
     xt_clib.c            \
     xt_intr.c
 
+ifeq ($(MPU),1)
+TEST_FILES += mpu_basic.c
+endif
+
 EXE         = $(addprefix $(BLDDIR)/,$(patsubst %.c,%.exe,$(TEST_FILES)))
 OBJS        = $(addprefix $(BLDDIR)/,$(patsubst %.c,%.o,$(TEST_FILES)))
 SRC_FILES   = $(TEST_FILES)
@@ -86,6 +90,8 @@ DFLAGS     += -DSTANDALONE
 CFLAGS     ?= -O2 -Os -g -Wall -Werror
 CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS) $(MPUFLAGS)
 LDFLAGS    ?= -Wl,--gc-sections
+
+mpu_basic_CCFLAGS = -O0
 
 # use make DEBUG=1 to get MPU debug prints
 ifeq ($(DEBUG),1)
@@ -137,6 +143,8 @@ $(OBJS) : $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
 $(OSLIB) ::
 	$(MAKE) -f $(OSROOT)$(S)Makefile all TARGET=$(TARGET) CFLAGS="$(CFLAGS)" SRCROOT=$(OSROOT) BLDROOT=$(BLDROOT) MPU=$(MPU)
 
+mpu_basic : $(BLDDIR)/mpu_basic.exe
+
 example   : $(BLDDIR)/example.exe
 
 perf_test : $(BLDDIR)/perf_test.exe
@@ -161,7 +169,7 @@ clean :
 clean_all :
 	$(RM_R) $(BLDROOT)
 
-.PHONY : all clean clean_all example perf_test xt_coproc xt_alloca xt_clib xt_intr
+.PHONY : all clean clean_all mpu_basic example perf_test xt_coproc xt_alloca xt_clib xt_intr
 
 help :
 	@echo Available options:
