@@ -257,18 +257,6 @@
 /* Static limit for number of configurable regions per task */
 #define configNUM_CONFIGURABLE_REGIONS  3
 
-/* Privileged device region */
-#define configPRIVILEGE_DEVICE_START    0x02000000
-#define configPRIVILEGE_DEVICE_END      0x03000000
-
-/* User device region */
-#define configUSER_DEVICE_START         0xD0000000
-#define configUSER_DEVICE_END           0xD1000000
-
-/* Shared data region */
-#define configSHARED_DATA_START         0xE0000000
-#define configSHARED_DATA_END           0xE1000000
-
 /* Stack location for legacy tasks */
 #define configLEGACY_TASK_STACK_START   portLEGACY_TASK_STACK_START
 #define configLEGACY_TASK_STACK_END     portLEGACY_TASK_STACK_END
