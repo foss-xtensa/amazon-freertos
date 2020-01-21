@@ -89,7 +89,7 @@ INCS        = -I$(SRCDIR) -I$(CFGDIR) -I$(OSROOT) -I$(OSINCDIR) -I$(OSINCDIR)$(S
 DFLAGS     += -DSTANDALONE
 CFLAGS     ?= -O2 -Os -g -Wall -Werror
 CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS) $(MPUFLAGS)
-LDFLAGS    ?= -Wl,--gc-sections
+LDFLAGS    ?= -Wl,--gc-sections $(CFLAGS)
 
 mpu_basic_CCFLAGS = -O0
 
