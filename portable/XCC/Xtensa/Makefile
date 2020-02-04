@@ -94,7 +94,7 @@ $(OSLIB) : $(LIB_O_LIST)
 $(BLDDIR)/asm-offsets.h : asm-offsets.c $(BLDDIR)/.mkdir
 	$(CC) $(CCFLAGS) $(IFLAGS) -MD -MF $(subst .h,.d,$@) -MT $@ -ffunction-sections -fdata-sections -Wl,--gc-sections -o $@.exe $<
 	$(ISS) $@.exe > $@
-	rm -f $@.exe
+	$(RM) $(subst /,$(S),$@.exe)
 
 $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
 	$(CC) $(CCFLAGS) $(IFLAGS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<

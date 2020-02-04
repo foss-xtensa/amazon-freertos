@@ -82,7 +82,7 @@ LSPPATH = $(LSP)
 endif
 
 # Build options. Override CFLAGS from the make command line if desired.
-# NOTE: Default LDFLAGS are set up to discard unused sections so that 
+# NOTE: Default LDFLAGS are set up to discard unused sections so that
 # the final exe size is minimized.
 
 INCS        = -I$(SRCDIR) -I$(CFGDIR) -I$(OSROOT) -I$(OSINCDIR) -I$(OSINCDIR)$(S)private -I$(BLDDIR)
@@ -116,12 +116,18 @@ small : small_test
 
 os : $(OSLIB)
 
+ifeq ($(HOSTTYPE),win)
+SECT_PRIV := PLACE SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) WITH_SECTION(.data)
+endif
+
+ifeq ($(HOSTTYPE),unix)
 SECT_PRIV := "PLACE SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) WITH_SECTION(.data)"
+endif
 
 $(LSPPATH)/.mkdir :
 	$(MKPATH) $(LSPPATH)
-	$(CP) $(CONFIGDIR)$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)memmap.xmm $(LSPPATH)
-	$(CP) $(CONFIGDIR)$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)specs $(LSPPATH)
+	$(CP) $(subst /,$(S),$(CONFIGDIR))$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)memmap.xmm $(LSPPATH)
+	$(CP) $(subst /,$(S),$(CONFIGDIR))$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)specs $(LSPPATH)
 	echo $(SECT_PRIV) >> $(LSPPATH)$(S)memmap.xmm
 	xt-genldscripts -b $(LSPPATH)
 	@echo "" > $@
