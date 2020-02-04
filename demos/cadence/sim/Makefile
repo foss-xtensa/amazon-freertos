@@ -72,7 +72,7 @@ LSP         = xtkc705-rt
 endif
 
 # Build options. Override CFLAGS from the make command line if desired.
-# NOTE: Default LDFLAGS are set up to discard unused sections so that 
+# NOTE: Default LDFLAGS are set up to discard unused sections so that
 # the final exe size is minimized.
 
 INCS        = -I$(SRCDIR) -I$(CFGDIR) -I$(OSROOT) -I$(OSINCDIR) -I$(OSINCDIR)$(S)private -I$(BLDDIR)
