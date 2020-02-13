@@ -36,6 +36,7 @@ OSINCDIR    = $(abspath $(DROOT)$(S)..$(S)..$(S)..$(S)include)
 
 TEST_FILES  = \
     example.c            \
+    timer_test1.c        \
     perf_test.c          \
     xt_alloca.c          \
     xt_coproc.c          \
