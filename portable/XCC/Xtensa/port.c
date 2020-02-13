@@ -88,9 +88,12 @@ extern void _xt_task_start( void );
 
 // Timer tick interval in cycles.
 static uint32_t xt_tick_cycles;
+TickType_t xMaxSuppressedTicks;
 
+#if ( configUSE_TICKLESS_IDLE != 0 )
 // Flag to indicate tick handling should be skipped.
-static uint32_t xt_skip_tick;
+static volatile uint32_t xt_skip_tick;
+#endif
 
 // Duplicate of inaccessible xSchedulerRunning.
 uint32_t port_xSchedulerRunning = 0U;
@@ -107,11 +110,13 @@ static void xt_tick_handler( void )
 {
     uint32_t diff;
 
-    // Skip if flag set, but clear flag.
-    if (xt_skip_tick > 0) {
+#if ( configUSE_TICKLESS_IDLE != 0 )
+    if ( xt_skip_tick )
+    {
+        vTaskStepTick( xt_skip_tick );
         xt_skip_tick = 0;
-        return;
     }
+#endif
 
     do
     {
@@ -157,6 +162,7 @@ static void xt_tick_timer_init( void )
     #endif
     #endif
 
+    xMaxSuppressedTicks = 0xFFFFFFFFU / xt_tick_cycles;
     xt_set_interrupt_handler( XT_TIMER_INTNUM, (xt_handler) xt_tick_handler, 0 );
     xt_set_ccompare( XT_TIMER_INDEX, xthal_get_ccount() + xt_tick_cycles );
     xt_interrupt_enable( XT_TIMER_INTNUM );
@@ -302,22 +308,8 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
 #if ( configUSE_TICKLESS_IDLE != 0 )
 void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 {
-    TickType_t xMaxSuppressedTicks = 0xFFFFFFFFU / xt_tick_cycles;
     eSleepModeStatus eSleepStatus;
-    uint32_t num_cycles;
     uint32_t ps;
-
-    // Compute number of cycles to sleep for, capped by max limit.
-    // we use one less than the number of ticks because we are already
-    // partway through the current tick. This is adjusted later below.
-    if ( xExpectedIdleTime > xMaxSuppressedTicks )
-    {
-        num_cycles = xt_tick_cycles * ( xMaxSuppressedTicks - 1U );
-    }
-    else
-    {
-        num_cycles = xt_tick_cycles * ( xExpectedIdleTime - 1U );
-    }
 
     // Lock out all interrupts. Otherwise reading and using ccount can
     // get messy. Shouldn't be a problem here since we are about to go
@@ -331,73 +323,72 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
     }
     else
     {
-        uint32_t cnt1;
-        uint32_t cnt2;
-        uint32_t ticks;
-        uint32_t save_ccompare = xt_get_ccompare( XT_TIMER_INDEX );
+        uint32_t num_cycles;
+        uint32_t first_blocked_tick;
+        uint32_t ccompare;
+        uint32_t skip_tick;
+        uint32_t now;
 
-        // We don't want the timer handler to be run before execution can
-        // resume after waiti, so set the skip flag.
-        xt_skip_tick = 1;
-
-        // Adjust for the remaining time in the current tick period.
-        cnt1 = xthal_get_ccount();
-        num_cycles += save_ccompare - cnt1;
-
-        if ( (save_ccompare - cnt1) > xt_tick_cycles )
+        // Compute number of cycles to sleep for, capped by max limit.
+        // we use one less than the number of ticks because we are already
+        // partway through the current tick. This is adjusted later below.
+        if ( xExpectedIdleTime > xMaxSuppressedTicks )
         {
-            // The only way this can happen is if the interrupt is pending.
-            XT_WSR_PS( ps );
-            return;
+            skip_tick = xMaxSuppressedTicks - 1U;
         }
+        else
+        {
+            skip_tick = xExpectedIdleTime - 1U;
+        }
+
+        num_cycles = xt_tick_cycles * skip_tick;
+        first_blocked_tick = xt_get_ccompare( XT_TIMER_INDEX );
+        xt_skip_tick = skip_tick;
 
         // Set up for timer interrupt and sleep.
-        xt_set_ccompare( XT_TIMER_INDEX, cnt1 + num_cycles );
+        ccompare = first_blocked_tick + num_cycles;
+        xt_set_ccompare( XT_TIMER_INDEX, ccompare );
         XT_WAITI( 0 );
-
-        // Block interrupts again before messing around with ccount.
         XT_RSIL( XCHAL_NUM_INTLEVELS );
-        cnt2 = xthal_get_ccount();
 
-        // Set up the next tick. This works whether we were woken up by the
-        // tick interrupt or some other interrupt. It pulls in the next tick
-        // interrupt if we were woken by something else.
+        skip_tick = xt_skip_tick;
+        now = xt_get_ccount();
 
-        // Set up the next tick. How we do it depends on what woke us up.
-        // If we still haven't reached the 'old' tick target (save_ccompare)
-        // then obviously we were woken by another interrupt. Set the next
-        // tick time back to what it was, as long as it is not so close to
-        // ccount as to risk ccount going past it while we are setting it.
-        if ( (int32_t)(save_ccompare - cnt2) > 100 )
+        // Awakened by non-timer interrupt, update tick counter here.
+
+        if ( skip_tick )
         {
-            xt_set_ccompare( XT_TIMER_INDEX, save_ccompare );
-        }
-        else
-        {
-            uint32_t tmp = xt_tick_cycles - ((cnt2 - cnt1) % xt_tick_cycles);
-            xt_set_ccompare( XT_TIMER_INDEX, tmp + xthal_get_ccount() );
-        }
+            // If there's more than a tick period from now to the timer
+            // deadline try to move deadline to the next possible tick.
+            // Otherwise update tick count for the passed ticks, but don't
+            // change the deadline.
 
-        // Step the tick count forward by the number of ticks that actually
-        // elapsed before wakeup, less 1.
-        ticks = ( cnt2 - cnt1 ) / xt_tick_cycles;
-
-        if ( ticks > 1U )
-        {
-            vTaskStepTick( ticks - 1U );
-        }
-        else
-        {
-            // We need to keep track of partial tick periods spent in sleep
-            // else the tick count will fall behind.
-            static uint32_t accum_cycles = 0U;
-
-            accum_cycles += cnt2 - cnt1;
-            while ( accum_cycles > xt_tick_cycles )
+            if ( ccompare - now > xt_tick_cycles &&
+                 ccompare - now <= INT32_MAX )
             {
-                vTaskStepTick( 1 );
-                accum_cycles -= xt_tick_cycles;
+                uint32_t prev_tick = first_blocked_tick - xt_tick_cycles;
+                uint32_t actual_cycles = now - prev_tick;
+                uint32_t ticks = actual_cycles / xt_tick_cycles;
+                uint32_t diff;
+
+                ccompare = first_blocked_tick + ticks * xt_tick_cycles;
+
+                do
+                {
+                    vTaskStepTick( ticks );
+                    xt_set_ccompare( XT_TIMER_INDEX, ccompare );
+                    diff = xt_get_ccount() - ccompare;
+                    ccompare += xt_tick_cycles;
+                    ticks = 1;
+
+                } while ( diff <= INT32_MAX );
             }
+            else
+            {
+                vTaskStepTick( skip_tick );
+            }
+
+            xt_skip_tick = 0;
         }
     }
 
