@@ -306,7 +306,7 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
 // Tickless idle support. Suppress N ticks and sleep when directed by kernel.
 //-----------------------------------------------------------------------------
 #if ( configUSE_TICKLESS_IDLE != 0 )
-void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
+void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime )
 {
     eSleepModeStatus eSleepStatus;
     uint32_t ps;
@@ -329,6 +329,7 @@ void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
         uint32_t skip_tick;
         uint32_t now;
 
+        xExpectedIdleTime = target - xTaskGetTickCountFromISR ();
         // Compute number of cycles to sleep for, capped by max limit.
         // we use one less than the number of ticks because we are already
         // partway through the current tick. This is adjusted later below.
