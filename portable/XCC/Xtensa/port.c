@@ -90,6 +90,8 @@ extern void _xt_task_start( void );
 static uint32_t xt_tick_cycles;
 TickType_t xMaxSuppressedTicks;
 
+static uint32_t xt_tick_count;
+
 #if ( configUSE_TICKLESS_IDLE != 0 )
 // Flag to indicate tick handling should be skipped.
 static volatile uint32_t xt_skip_tick;
@@ -114,6 +116,7 @@ static void xt_tick_handler( void )
     if ( xt_skip_tick )
     {
         vTaskStepTick( xt_skip_tick );
+        xt_tick_count += xt_skip_tick;
         xt_skip_tick = 0;
     }
 #endif
@@ -135,6 +138,7 @@ static void xt_tick_handler( void )
         interruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
         {
             ret = xTaskIncrementTick();
+            ++xt_tick_count;
         }
         portCLEAR_INTERRUPT_MASK_FROM_ISR( interruptMask );
 
@@ -165,6 +169,7 @@ static void xt_tick_timer_init( void )
     xMaxSuppressedTicks = 0xFFFFFFFFU / xt_tick_cycles;
     xt_set_interrupt_handler( XT_TIMER_INTNUM, (xt_handler) xt_tick_handler, 0 );
     xt_set_ccompare( XT_TIMER_INDEX, xthal_get_ccount() + xt_tick_cycles );
+    xt_tick_count = xTaskGetTickCount();
     xt_interrupt_enable( XT_TIMER_INTNUM );
 }
 
@@ -329,7 +334,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
         uint32_t skip_tick;
         uint32_t now;
 
-        xExpectedIdleTime = target - xTaskGetTickCountFromISR ();
+        xExpectedIdleTime = target - xt_tick_count;
         // Compute number of cycles to sleep for, capped by max limit.
         // we use one less than the number of ticks because we are already
         // partway through the current tick. This is adjusted later below.
@@ -377,6 +382,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
                 do
                 {
                     vTaskStepTick( ticks );
+                    xt_tick_count += ticks;
                     xt_set_ccompare( XT_TIMER_INDEX, ccompare );
                     diff = xt_get_ccount() - ccompare;
                     ccompare += xt_tick_cycles;
@@ -387,6 +393,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
             else
             {
                 vTaskStepTick( skip_tick );
+                xt_tick_count += skip_tick;
             }
 
             xt_skip_tick = 0;
