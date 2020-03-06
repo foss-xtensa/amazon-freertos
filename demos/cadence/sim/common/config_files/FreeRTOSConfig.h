@@ -234,7 +234,6 @@
 
 /* Enable runtime stats */
 #define configGENERATE_RUN_TIME_STATS 1
-#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() do {} while (0)
 
 /* Specific config for XTENSA (these can be deleted and they will take default values) */
 
