@@ -202,6 +202,9 @@ BaseType_t xPortRaisePrivilege( void );
 /* Fine resolution time */
 #define portGET_RUN_TIME_COUNTER_VALUE()  xthal_get_ccount()
 
+/* No need to do anything for the ccount timer. */
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() do {} while (0)
+
 /* Kernel utilities. */
 void vPortYield( void );
 void _frxt_setup_switch( void );
