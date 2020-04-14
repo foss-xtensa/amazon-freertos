@@ -164,7 +164,13 @@ portEXIT_CRITICAL_NESTED(uint32_t state)
 /* Architecture specifics. */
 #define portSTACK_GROWTH			( -1 )
 #define portTICK_PERIOD_MS			( ( TickType_t ) 1000 / configTICK_RATE_HZ )
-#define portBYTE_ALIGNMENT			4
+#ifdef configBYTE_ALIGNMENT
+#define portBYTE_ALIGNMENT			configBYTE_ALIGNMENT
+#elif XCHAL_DATA_WIDTH < 16
+#define portBYTE_ALIGNMENT			XCHAL_DATA_WIDTH
+#else
+#define portBYTE_ALIGNMENT			16
+#endif
 #define portNOP()					XT_NOP()
 /*-----------------------------------------------------------*/
 
