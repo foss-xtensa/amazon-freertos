@@ -191,6 +191,20 @@ void vPortEndScheduler( void ) PRIVILEGED_FUNCTION;
 	void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMORY_REGION * const xRegions, StackType_t *pxBottomOfStack, uint32_t ulStackDepth ) PRIVILEGED_FUNCTION;
 #endif
 
+/*
+ * Update CPU core/timer frequency.
+ *
+ * This is implemented when configUSE_TICKLESS_IDLE is set to 1.
+ * XT_CLOCK_FREQ or xtbsp_clock_freq_hz must return new clock frequency
+ * when this function is called.
+ *
+ * This function should be called as soon as the core frequency has changed.
+ * It is safe to call it from an interrupt service routine.
+ * It will update deadline of the internal tick timer and cache new core
+ * frequency.
+ */
+void xt_update_clock_frequency(void);
+
 #ifdef __cplusplus
 }
 #endif
