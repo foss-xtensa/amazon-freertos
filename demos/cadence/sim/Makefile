@@ -39,6 +39,7 @@ TEST_FILES  = \
     timer_test1.c        \
     timer_test2.c        \
     perf_test.c          \
+    var_freq.c           \
     xt_alloca.c          \
     xt_coproc.c          \
     xt_clib.c            \
