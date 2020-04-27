@@ -149,23 +149,24 @@ static void xt_tick_handler( void )
     while ( diff > xt_tick_cycles );
 }
 
+static void update_xt_tick_cycles( void )
+{
+    // Compute the number of cycles per tick.
+    #ifdef XT_CLOCK_FREQ
+    xt_tick_cycles = ( XT_CLOCK_FREQ / XT_TICK_PER_SEC );
+    #elif defined(XT_BOARD)
+    xt_tick_cycles = xtbsp_clock_freq_hz() / XT_TICK_PER_SEC;
+    #else
+    #error "No way to obtain processor clock frequency"
+    #endif
+}
 //-----------------------------------------------------------------------------
 // Tick timer init. Install interrupt handler, set up first tick, and
 // enable timer interrupt.
 //-----------------------------------------------------------------------------
 static void xt_tick_timer_init( void )
 {
-    // Compute the number of cycles per tick.
-    #ifdef XT_CLOCK_FREQ
-    xt_tick_cycles = ( XT_CLOCK_FREQ / XT_TICK_PER_SEC );
-    #else
-    #ifdef XT_BOARD
-    xt_tick_cycles = xtbsp_clock_freq_hz() / XT_TICK_PER_SEC;
-    #else
-    #error "No way to obtain processor clock frequency"
-    #endif
-    #endif
-
+    update_xt_tick_cycles();
     xMaxSuppressedTicks = 0xFFFFFFFFU / xt_tick_cycles;
     xt_set_interrupt_handler( XT_TIMER_INTNUM, (xt_handler) xt_tick_handler, 0 );
     xt_set_ccompare( XT_TIMER_INDEX, xthal_get_ccount() + xt_tick_cycles );
@@ -421,4 +422,95 @@ void vPortExitCritical( void )
   vTaskExitCritical();
   vPortResetPrivilege( xRunningPrivileged );
 }
+#endif
+
+#if ( configUSE_VARIABLE_FREQUENCY != 0 )
+static void update_tick_remainder( uint32_t now )
+{
+    uint32_t old_ccompare;
+    uint32_t old_tick_cycles;
+
+    old_ccompare = xt_get_ccompare( XT_TIMER_INDEX );
+    old_tick_cycles = xt_tick_cycles;
+    update_xt_tick_cycles();
+
+    // If tick deadline has not been reached yet correct number of remaining
+    // cycles, otherwise timer interrupt must be pending, just service it.
+
+    if ( old_ccompare - now < old_tick_cycles )
+    {
+        uint32_t new_ccompare = now +
+            (uint64_t)(old_ccompare - now) * xt_tick_cycles / old_tick_cycles;
+
+        xt_set_ccompare( XT_TIMER_INDEX, new_ccompare );
+        now = xt_get_ccount();
+        if ( new_ccompare - now > xt_tick_cycles )
+            xt_tick_handler();
+    }
+}
+
+#if ( configUSE_TICKLESS_IDLE != 0 )
+void xt_update_clock_frequency( void )
+{
+    uint32_t ps;
+    uint32_t skip_tick;
+    uint32_t now;
+
+    ps = XT_RSIL( XCHAL_NUM_INTLEVELS );
+
+    now = xt_get_ccount();
+    skip_tick = xt_skip_tick;
+
+    if ( skip_tick )
+    {
+        uint32_t ccompare = xt_get_ccompare( XT_TIMER_INDEX );
+
+        // If there's more than a tick period from now to the timer
+        // deadline try to move deadline to the next possible tick.
+        // Otherwise update tick count for the passed ticks, but don't
+        // change the deadline.
+
+        if ( ccompare - now > xt_tick_cycles &&
+             ccompare - now <= INT32_MAX )
+        {
+            uint32_t first_blocked_tick = ccompare - xt_tick_cycles * skip_tick;
+            uint32_t prev_tick = first_blocked_tick - xt_tick_cycles;
+            uint32_t actual_cycles = now - prev_tick;
+            uint32_t ticks = actual_cycles / xt_tick_cycles;
+            uint32_t diff;
+
+            ccompare = first_blocked_tick + ticks * xt_tick_cycles;
+
+            do
+            {
+                vTaskStepTick( ticks );
+                xt_tick_count += ticks;
+                xt_set_ccompare( XT_TIMER_INDEX, ccompare );
+                diff = xt_get_ccount() - ccompare;
+                ccompare += xt_tick_cycles;
+                ticks = 1;
+
+            } while ( diff <= INT32_MAX );
+        }
+        else
+        {
+            vTaskStepTick( skip_tick );
+            xt_tick_count += skip_tick;
+        }
+        xt_skip_tick = 0;
+    }
+    update_tick_remainder( now );
+
+    XT_WSR_PS( ps );
+}
+#else
+void xt_update_clock_frequency( void )
+{
+    uint32_t ps;
+
+    ps = XT_RSIL( XCHAL_NUM_INTLEVELS );
+    update_tick_remainder( xt_get_ccount() );
+    XT_WSR_PS( ps );
+}
+#endif
 #endif
