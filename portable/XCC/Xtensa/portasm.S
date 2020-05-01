@@ -143,7 +143,7 @@ _frxt_int_exit:
 
     movi    a2,  port_xSchedulerRunning
     movi    a3,  port_interruptNesting
-    rsil    a0,  XCHAL_EXCM_LEVEL       /* lock out interrupts             */
+    rsil    a0,  XT_IRQ_LOCK_LEVEL      /* lock out interrupts             */
     l32i    a2,  a2, 0                  /* a2 = port_xSchedulerRunning     */
     beqz    a2,  .Lnoswitch             /* scheduler not running, no tasks */
     l32i    a2,  a3, 0                  /* a2 = port_interruptNesting      */
@@ -348,7 +348,7 @@ vPortYield:
     /* instead to save cycles.                                              */
     movi    a6,  ~(PS_WOE_MASK|PS_INTLEVEL_MASK)  /* spills a4-a7 if needed */
     and     a2,  a2, a6                           /* clear WOE, INTLEVEL    */
-    addi    a2,  a2, XCHAL_EXCM_LEVEL             /* set INTLEVEL           */
+    addi    a2,  a2, XT_IRQ_LOCK_LEVEL            /* set INTLEVEL           */
     wsr     a2,  PS
     rsync
     call0   xthal_window_spill_nw
@@ -356,7 +356,7 @@ vPortYield:
     wsr     a2,  PS
     #endif
 
-    rsil    a2,  XCHAL_EXCM_LEVEL       /* disable low/med interrupts       */
+    rsil    a2,  XT_IRQ_LOCK_LEVEL      /* disable low/med interrupts       */
 
     #if XCHAL_CP_NUM > 0
     /* Save coprocessor callee-saved state (if any). At this point CPENABLE */

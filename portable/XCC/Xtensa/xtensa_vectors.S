@@ -288,7 +288,7 @@ _xt_panic:
     movi    a2, SYS_gdb_abort
     simcall
     #else
-    rsil    a2, XCHAL_EXCM_LEVEL            /* disable all low & med ints */
+    rsil    a2, XT_IRQ_LOCK_LEVEL           /* disable all low & med ints */
 1:  j       1b                              /* loop infinitely */
     #endif
 
@@ -574,9 +574,9 @@ _xt_user_exc:
 
     /* Set up PS for C, reenable hi-pri interrupts, and clear EXCM. */
     #ifdef __XTENSA_CALL0_ABI__
-    movi    a0, PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM
+    movi    a0, PS_INTLEVEL(XT_IRQ_LOCK_LEVEL) | PS_UM
     #else
-    movi    a0, PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM | PS_WOE
+    movi    a0, PS_INTLEVEL(XT_IRQ_LOCK_LEVEL) | PS_UM | PS_WOE
     #endif
     wsr     a0, PS
 

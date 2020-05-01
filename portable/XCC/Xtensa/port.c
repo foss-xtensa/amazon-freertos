@@ -285,7 +285,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
     // Lock out all interrupts. Otherwise reading and using ccount can
     // get messy. Shouldn't be a problem here since we are about to go
     // to sleep, and the waiti will re-enable interrupts shortly.
-    ps = XT_RSIL( XCHAL_NUM_INTLEVELS );
+    ps = XT_RSIL( XT_IRQ_LOCK_LEVEL );
 
     eSleepStatus = eTaskConfirmSleepModeStatus();
     if ( eSleepStatus == eAbortSleep )
@@ -321,7 +321,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
         ccompare = first_blocked_tick + num_cycles;
         xt_set_ccompare( XT_TIMER_INDEX, ccompare );
         XT_WAITI( 0 );
-        XT_RSIL( XCHAL_NUM_INTLEVELS );
+        XT_RSIL( XT_IRQ_LOCK_LEVEL );
 
         skip_tick = xt_skip_tick;
         now = xt_get_ccount();

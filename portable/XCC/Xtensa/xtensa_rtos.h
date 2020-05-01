@@ -243,5 +243,7 @@ Xtensa Port Version.
 #define XTENSA_PORT_VERSION             2.01
 #define XTENSA_PORT_VERSION_STRING      "2.01"
 
+#define XT_IRQ_LOCK_LEVEL XCHAL_EXCM_LEVEL
+
 #endif /* XTENSA_RTOS_H */
 
