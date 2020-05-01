@@ -399,7 +399,7 @@ _xt_coproc_release:
     addi    a4, a3, XCHAL_CP_MAX << 2       /* a4 = top+1 of owner array */
     movi    a5, 0                           /* a5 = 0 (unowned) */
 
-    rsil    a6, XCHAL_EXCM_LEVEL            /* lock interrupts */
+    rsil    a6, XT_IRQ_LOCK_LEVEL           /* lock interrupts */
 
 1:  l32i    a7, a3, 0                       /* a7 = owner at a3 */
     bne     a2, a7, 2f                      /* if (coproc_sa_base == owner) */
