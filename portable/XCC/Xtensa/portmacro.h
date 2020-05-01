@@ -57,6 +57,8 @@
 extern "C" {
 #endif
 
+#include "xtensa_rtos.h"
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
@@ -107,7 +109,7 @@ static inline void
 portDISABLE_INTERRUPTS(void)
 {
 #if XCHAL_HAVE_INTERRUPTS
-	XT_RSIL (15);
+	XT_RSIL (XT_IRQ_LOCK_LEVEL);
 #endif
 	portbenchmarkINTERRUPT_DISABLE ();
 }
@@ -167,7 +169,7 @@ portENTER_CRITICAL_NESTED(void)
 	uint32_t state;
 
 #if XCHAL_HAVE_INTERRUPTS
-	state = XT_RSIL (15);
+	state = XT_RSIL (XT_IRQ_LOCK_LEVEL);
 #else
 	state = 0;
 #endif
