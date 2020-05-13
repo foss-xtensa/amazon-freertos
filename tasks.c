@@ -4329,7 +4329,7 @@ TCB_t *pxTCB;
 		}
 		else
 		{
-			mtCOVERAGE_TEST_MARKER();
+			portENABLE_INTERRUPTS();
 		}
 	}
 
