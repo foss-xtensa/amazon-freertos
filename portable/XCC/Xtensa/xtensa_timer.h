@@ -57,7 +57,8 @@ Select timer to use for periodic tick, and determine its interrupt number
 and priority. User may specify a timer by defining XT_TIMER_INDEX with -D,
 in which case its validity is checked (it must exist in this core and must 
 not be on a high priority interrupt - an error will be reported in invalid).
-Otherwise select the first low or medium priority interrupt timer available.
+Otherwise select the highest priority low or medium priority interrupt timer
+available.
 */
 #if XCHAL_NUM_TIMERS == 0
 
@@ -73,19 +74,25 @@ Otherwise select the first low or medium priority interrupt timer available.
     #endif
   #endif
   #if XCHAL_TIMER2_INTERRUPT != XTHAL_TIMER_UNCONFIGURED
-    #if XCHAL_INT_LEVEL(XCHAL_TIMER2_INTERRUPT) <= XCHAL_EXCM_LEVEL
+    #if XCHAL_INT_LEVEL(XCHAL_TIMER2_INTERRUPT) <= XCHAL_EXCM_LEVEL && \
+        (!defined(XT_TIMER_INDEX) || \
+	 XCHAL_INT_LEVEL(XCHAL_TIMER2_INTERRUPT) > XCHAL_INT_LEVEL(XT_TIMER_INDEX))
       #undef  XT_TIMER_INDEX
       #define XT_TIMER_INDEX    2
     #endif
   #endif
   #if XCHAL_TIMER1_INTERRUPT != XTHAL_TIMER_UNCONFIGURED
-    #if XCHAL_INT_LEVEL(XCHAL_TIMER1_INTERRUPT) <= XCHAL_EXCM_LEVEL
+    #if XCHAL_INT_LEVEL(XCHAL_TIMER1_INTERRUPT) <= XCHAL_EXCM_LEVEL && \
+        (!defined(XT_TIMER_INDEX) || \
+	 XCHAL_INT_LEVEL(XCHAL_TIMER1_INTERRUPT) > XCHAL_INT_LEVEL(XT_TIMER_INDEX))
       #undef  XT_TIMER_INDEX
       #define XT_TIMER_INDEX    1
     #endif
   #endif
   #if XCHAL_TIMER0_INTERRUPT != XTHAL_TIMER_UNCONFIGURED
-    #if XCHAL_INT_LEVEL(XCHAL_TIMER0_INTERRUPT) <= XCHAL_EXCM_LEVEL
+    #if XCHAL_INT_LEVEL(XCHAL_TIMER0_INTERRUPT) <= XCHAL_EXCM_LEVEL && \
+        (!defined(XT_TIMER_INDEX) || \
+	 XCHAL_INT_LEVEL(XCHAL_TIMER0_INTERRUPT) > XCHAL_INT_LEVEL(XT_TIMER_INDEX))
       #undef  XT_TIMER_INDEX
       #define XT_TIMER_INDEX    0
     #endif
