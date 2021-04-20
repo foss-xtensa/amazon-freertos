@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) 2015-2019 Cadence Design Systems, Inc.
+ * Copyright (c) 2015-2021 Cadence Design Systems, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,18 +22,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * XTENSA CONTEXT FRAMES AND MACROS FOR RTOS ASSEMBLER SOURCES
- *
- * This header contains definitions and macros for use primarily by Xtensa
- * RTOS assembly coded source files. It includes and uses the Xtensa hardware
- * abstraction layer (HAL) to deal with config specifics. It may also be
- * included in C source files.
- *
- * !! Supports only Xtensa Exception Architecture 2 (XEA2). XEA1 not supported. !!
- *
- * NOTE: The Xtensa architecture requires stack pointer alignment to 16 bytes.
- */
+/**************************************************************************
+
+    XTENSA CONTEXT FRAMES AND MACROS FOR RTOS ASSEMBLER SOURCES
+
+    This header contains definitions and macros for use primarily by Xtensa
+    RTOS assembly source files. It includes and uses the Xtensa hardware
+    abstraction layer (HAL) to deal with config specifics. It may also be
+    included in C source files.
+
+    NOTE: The Xtensa architecture requires stack pointer alignment to 16 bytes.
+
+***************************************************************************/
 
 #ifndef XTENSA_CONTEXT_H
 #define XTENSA_CONTEXT_H
@@ -92,6 +92,8 @@
 -------------------------------------------------------------------------------
 */
 
+#if XCHAL_HAVE_XEA2
+
 XSTRUCT_BEGIN
 XSTRUCT_FIELD (long, 4, XT_STK_EXIT,     exit) /* exit point for dispatch */
 XSTRUCT_FIELD (long, 4, XT_STK_PC,       pc)   /* return PC */
@@ -116,25 +118,66 @@ XSTRUCT_FIELD (long, 4, XT_STK_SAR,      sar)
 XSTRUCT_FIELD (long, 4, XT_STK_EXCCAUSE, exccause)
 XSTRUCT_FIELD (long, 4, XT_STK_EXCVADDR, excvaddr)
 #if XCHAL_HAVE_LOOPS
-XSTRUCT_FIELD (long, 4, XT_STK_LBEG,   lbeg)
-XSTRUCT_FIELD (long, 4, XT_STK_LEND,   lend)
-XSTRUCT_FIELD (long, 4, XT_STK_LCOUNT, lcount)
+XSTRUCT_FIELD (long, 4, XT_STK_LBEG,     lbeg)
+XSTRUCT_FIELD (long, 4, XT_STK_LEND,     lend)
+XSTRUCT_FIELD (long, 4, XT_STK_LCOUNT,   lcount)
+#endif
+#if XCHAL_HAVE_EXCLUSIVE
+XSTRUCT_FIELD (long, 4, XT_STK_ATOMCTL,  atomctl)
 #endif
 #ifndef __XTENSA_CALL0_ABI__
 /* Temporary space for saving stuff during window spill */
-XSTRUCT_FIELD (long, 4, XT_STK_TMP0,   tmp0)
-XSTRUCT_FIELD (long, 4, XT_STK_TMP1,   tmp1)
-XSTRUCT_FIELD (long, 4, XT_STK_TMP2,   tmp2)
+XSTRUCT_FIELD (long, 4, XT_STK_TMP0,     tmp0)
+XSTRUCT_FIELD (long, 4, XT_STK_TMP1,     tmp1)
+XSTRUCT_FIELD (long, 4, XT_STK_TMP2,     tmp2)
 #endif
 #ifdef XT_USE_SWPRI
 /* Storage for virtual priority mask */
-XSTRUCT_FIELD (long, 4, XT_STK_VPRI,   vpri)
+XSTRUCT_FIELD (long, 4, XT_STK_VPRI,     vpri)
 #endif
 #ifdef XT_USE_OVLY
 /* Storage for overlay state */
-XSTRUCT_FIELD (long, 4, XT_STK_OVLY,   ovly)
+XSTRUCT_FIELD (long, 4, XT_STK_OVLY,     ovly)
 #endif
 XSTRUCT_END(XtExcFrame)
+
+#endif /* XCHAL_HAVE_XEA2 */
+
+#if XCHAL_HAVE_XEA3
+
+XSTRUCT_BEGIN
+XSTRUCT_FIELD (long, 4, XT_STK_ATOMCTL,  atomctl)
+XSTRUCT_FIELD (long, 4, XT_STK_LCOUNT,   lcount)
+XSTRUCT_FIELD (long, 4, XT_STK_LEND,     lend)
+XSTRUCT_FIELD (long, 4, XT_STK_LBEG,     lbeg)
+XSTRUCT_FIELD (long, 4, XT_STK_PC,       pc)
+XSTRUCT_FIELD (long, 4, XT_STK_PS,       ps)
+XSTRUCT_FIELD (long, 4, XT_STK_EXCCAUSE, exccause)
+XSTRUCT_FIELD (long, 4, XT_STK_EXCVADDR, excvaddr)
+#ifdef __XTENSA_CALL0_ABI__
+XSTRUCT_FIELD (long, 4, XT_STK_A0,     a0)
+XSTRUCT_FIELD (long, 4, XT_STK_A1,     a1)
+XSTRUCT_FIELD (long, 4, XT_STK_A2,     a2)
+XSTRUCT_FIELD (long, 4, XT_STK_A3,     a3)
+XSTRUCT_FIELD (long, 4, XT_STK_A4,     a4)
+XSTRUCT_FIELD (long, 4, XT_STK_A5,     a5)
+XSTRUCT_FIELD (long, 4, XT_STK_A6,     a6)
+XSTRUCT_FIELD (long, 4, XT_STK_A7,     a7)
+#endif
+XSTRUCT_FIELD (long, 4, XT_STK_A8,     a8)
+XSTRUCT_FIELD (long, 4, XT_STK_A9,     a9)
+XSTRUCT_FIELD (long, 4, XT_STK_A10,    a10)
+XSTRUCT_FIELD (long, 4, XT_STK_A11,    a11)
+XSTRUCT_FIELD (long, 4, XT_STK_A12,    a12)
+XSTRUCT_FIELD (long, 4, XT_STK_A13,    a13)
+XSTRUCT_FIELD (long, 4, XT_STK_A14,    a14)
+XSTRUCT_FIELD (long, 4, XT_STK_A15,    a15)
+#ifdef __XTENSA_WINDOWED_ABI__
+XSTRUCT_AFIELD(long, 4, XT_STK_SPILL,  spill, 8)
+#endif
+XSTRUCT_END(XtExcFrame)
+
+#endif /* XCHAL_HAVE_XEA3 */
 
 #if defined(_ASMLANGUAGE) || defined(__ASSEMBLER__)
 #define XT_STK_NEXT1      XtExcFrameSize
@@ -142,7 +185,10 @@ XSTRUCT_END(XtExcFrame)
 #define XT_STK_NEXT1      sizeof(XtExcFrame)
 #endif
 
-/* Allocate extra storage if needed */
+
+/* Allocate extra storage if needed for non-CP TIE state. Allow for alignment
+   padding as needed.
+ */
 #if XCHAL_EXTRA_SA_SIZE != 0
 
 #if XCHAL_EXTRA_SA_ALIGN <= 16
@@ -155,9 +201,29 @@ XSTRUCT_END(XtExcFrame)
 
 #else
 
+/* No extra storage required */
 #define XT_STK_NEXT2            XT_STK_NEXT1   
 
 #endif
+
+
+#if XCHAL_HAVE_XEA3
+
+/* Total frame size */
+#define XT_STK_FRMSZ            (ALIGNUP(0x10, XT_STK_NEXT2))
+
+/* Exception/interrupt frame size */
+#define XT_STK_XFRM_SZ          XT_STK_NEXT1
+
+/* Extra save area size (including alignment padding) */
+#define XT_STK_XTRA_SZ          (XT_STK_FRMSZ - XT_STK_XFRM_SZ)
+
+/* Alignment padding area size */
+#if XCHAL_EXTRA_SA_SIZE != 0
+#define XT_STK_ALIGN_SZ         (XT_STK_EXTRA - XT_STK_NEXT1)
+#endif
+
+#else
 
 /*
 -------------------------------------------------------------------------------
@@ -167,55 +233,7 @@ XSTRUCT_END(XtExcFrame)
 */
 #define XT_STK_FRMSZ            (ALIGNUP(0x10, XT_STK_NEXT2) + 0x20)
 
-
-/*
--------------------------------------------------------------------------------
-  SOLICITED STACK FRAME FOR A THREAD
-
-  A stack frame of this structure is allocated whenever a thread enters the 
-  RTOS kernel intentionally (and synchronously) to submit to thread scheduling.
-  It goes on the current thread's stack.
-
-  The solicited frame only includes registers that are required to be preserved
-  by the callee according to the compiler's ABI conventions, some space to save 
-  the return address for returning to the caller, and the caller's PS register.
-
-  For Windowed ABI, this stack frame includes the caller's base save area.
-
-  Note on XT_SOL_EXIT field:
-      It is necessary to distinguish a solicited from an interrupt stack frame.
-      This field corresponds to XT_STK_EXIT in the interrupt stack frame and is
-      always at the same offset (0). It can be written with a code (usually 0) 
-      to distinguish a solicted frame from an interrupt frame. An RTOS port may
-      opt to ignore this field if it has another way of distinguishing frames.
--------------------------------------------------------------------------------
-*/
-
-XSTRUCT_BEGIN
-#ifdef __XTENSA_CALL0_ABI__
-XSTRUCT_FIELD (long, 4, XT_SOL_EXIT, exit)
-XSTRUCT_FIELD (long, 4, XT_SOL_PC,   pc)
-XSTRUCT_FIELD (long, 4, XT_SOL_PS,   ps)
-XSTRUCT_FIELD (long, 4, XT_SOL_NEXT, next)
-XSTRUCT_FIELD (long, 4, XT_SOL_A12,  a12)    /* should be on 16-byte alignment */
-XSTRUCT_FIELD (long, 4, XT_SOL_A13,  a13)
-XSTRUCT_FIELD (long, 4, XT_SOL_A14,  a14)
-XSTRUCT_FIELD (long, 4, XT_SOL_A15,  a15)
-#else
-XSTRUCT_FIELD (long, 4, XT_SOL_EXIT, exit)
-XSTRUCT_FIELD (long, 4, XT_SOL_PC,   pc)
-XSTRUCT_FIELD (long, 4, XT_SOL_PS,   ps)
-XSTRUCT_FIELD (long, 4, XT_SOL_NEXT, next)
-XSTRUCT_FIELD (long, 4, XT_SOL_A0,   a0)    /* should be on 16-byte alignment */
-XSTRUCT_FIELD (long, 4, XT_SOL_A1,   a1)
-XSTRUCT_FIELD (long, 4, XT_SOL_A2,   a2)
-XSTRUCT_FIELD (long, 4, XT_SOL_A3,   a3)
 #endif
-XSTRUCT_END(XtSolFrame)
-
-/* Size of solicited stack frame */
-#define XT_SOL_FRMSZ            ALIGNUP(0x10, XtSolFrameSize)
-
 
 /*
 -------------------------------------------------------------------------------
@@ -339,13 +357,196 @@ XSTRUCT_END(XtSolFrame)
   #define RET0          ret
 #else
   /* Windowed */
-  #define ENTRY(sz)     entry   sp, sz
+#if XCHAL_HAVE_XEA3
+  #define ENTRY(sz)     entry   sp, (sz + 0x20)
+  #define ENTRY0        entry   sp, 0x20
+#else
+  #define ENTRY(sz)     entry   sp, (sz + 0x10)
   #define ENTRY0        entry   sp, 0x10
+#endif
   #define RET(sz)       retw
   #define RET0          retw
 #endif
 #endif
 
+
+/*
+-------------------------------------------------------------------------------
+  This flag is meant for internal use. Have all interrupts be dispatched via a
+  common wrapper, which takes care of doing some OS-specific stuff common to
+  all interrupt handlers. Said stuff cannot safely be handled in the RTOS_ENTER
+  and RTOS_EXIT macros.
+-------------------------------------------------------------------------------
+*/
+#if (defined XT_INTEXC_HOOKS)
+#define XT_USE_INT_WRAPPER    1
+#else
+#define XT_USE_INT_WRAPPER    0
+#endif
+
+#if XCHAL_HAVE_XEA3
+#ifdef XT_USE_SWPRI
+//#warning "Software prioritization of interrupts (XT_USE_SWPRI) not supported for XEA3."
+#endif
+
+#ifdef __ASSEMBLER__
+
+#include "asm-offsets.h"
+
+    // RTOS-specific entry macro. Use only a8, a12-a14.
+
+    .macro  XT_RTOS_INT_ENTER
+
+    .endm
+
+    // RTOS-specific exit macro. Use only a8-a14.
+    // (In call0, a15 holds user SP, must be preserved)
+
+    .macro  XT_RTOS_INT_EXIT
+
+    // Check scheduler state and interrupt nest state.
+
+    movi     a8,  port_xSchedulerRunning
+    movi     a9,  port_interruptNesting
+    l32i     a8,  a8, 0                         // a8 <- port_xSchedulerRunning
+    beqz     a8,  .Lnested                      // scheduler not running, no tasks
+    l32i     a8,  a9, 0                         // a8 <- port_interruptNesting
+    bnez     a8,  .Lnested                      // != 0 means nested, skip ahead
+    movi     a8,  port_yield_flag
+    l32i     a9,  a8, 0                         // a9 <- port_yield_flag
+    beqz     a9,  2f                            // no yield
+    movi     a9,  0
+    s32i     a9,  a8, 0                         // zero out for next time
+    j        .Lyield                            // no context save needed
+2:
+    movi     a8,  pxCurrentTCB
+    l32i     a9,  a8, 0                         // a9 <- pxCurrentTCB
+    beqz     a9,  .Lsched                       // no current, go to scheduler
+    movi    a10,  port_switch_flag
+    l32i    a11, a10, 0                         // a11 <- port_switch_flag
+    beqz    a11,  .Lnested                      // = 0 means no switch
+    movi    a11,  0
+    s32i    a11, a10, 0                         // zero out for next time
+
+    // Preemption, save remaining state of current (outgoing) thread
+
+    addi    a10,  a1, -XT_STK_FRMSZ
+    s32i    a10,  a9, TCB_TOP_OF_STACK_OFF      // pxCurrentTCB->pxTopOfStack <- SP
+
+    // Mark as preempted
+
+#if XCHAL_CP_NUM > 0
+    l32i    a10,  a9, TCB_END_OF_STACK_OFF
+    rsr     a12,  CPENABLE                      // Save and clear CPENABLE
+    s16i    a12, a10, XT_CPENABLE
+    movi    a12,  0
+    wsr     a12,  CPENABLE
+#endif
+
+    // Save non-CP TIE state if any
+#if XCHAL_EXTRA_SA_SIZE > 0
+    addi    a10,  a1, -XT_STK_FRMSZ + XT_STK_ALIGN_SZ    // where to save
+#if XCHAL_EXTRA_SA_ALIGN > 16
+    movi    a12, -XCHAL_EXTRA_SA_ALIGN
+    and     a10, a10, a12                       // align dynamically >16 bytes
+#endif
+    xchal_ncp_store a10, a11, a12, a13, a14
+#endif
+
+    // If windowed ABI, a0-a7 was not saved by dispatch code.
+    // These don't go into the exception frame, but below the
+    // exception frame pointer.
+
+#ifdef __XTENSA_WINDOWED_ABI__
+    addi    a10,  a1, -XT_STK_FRMSZ -32
+    s32i     a0, a10, 0
+    s32i     a2, a10, 8
+    s32i     a3, a10, 12
+    s32i     a4, a10, 16
+    s32i     a5, a10, 20
+    s32i     a6, a10, 24
+    s32i     a7, a10, 28
+#endif
+
+.Lsched:
+    // When we get here, interrupts are disabled. Also, we have saved
+    // all registers if needed so all of a0-a15 are available to use.
+    // Note we are using the existing stack to make the call below.
+
+    addi     a1,  a1, -XT_STK_FRMSZ -32
+#ifdef __XTENSA_WINDOWED_ABI__
+    movi    a10, vTaskSwitchContext
+    callx8  a10
+#else
+    movi    a10, vTaskSwitchContext
+    callx0  a10
+#endif
+
+.Lyield:
+    // Come here directly if the outgoing task yielded. pxCurrentTCB
+    // has already been updated.
+
+    movi     a9,  pxCurrentTCB
+    l32i     a9,  a9, 0                         // a9 <- pxCurrentTCB
+
+#if XCHAL_CP_NUM > 0
+    l32i    a10,  a9, TCB_END_OF_STACK_OFF
+    l16ui   a10,  a10, XT_CPENABLE
+    wsr     a10,  CPENABLE                      // restore CPENABLE
+#endif
+
+    l32i     a1,  a9, TCB_TOP_OF_STACK_OFF      // a1 <- pxCurrentTCB->pxTopOfStack
+    addi    a10,  a1, XT_STK_FRMSZ - XT_STK_XFRM_SZ
+    l32i    a10,  a1, XT_STK_ATOMCTL
+    j 1f //bbci    a10,  31, 1f                        // Bit 31 = solicited flag
+
+    // Solicited restore
+    addi     a1,  a1, XT_STK_FRMSZ              // restore original SP
+    addi     a2,  a1, -XT_STK_XFRM_SZ
+    l32i     a3,  a2, XT_STK_PC                 // a3 = return PC
+
+    movi     a2, PS_DI
+    xps  a2, a2                                 // disable interrupts
+    movi     a2, 0
+    wsr.ms   a2                                 // restore normal DISPST
+    rsync
+    jx   a3                                     // return to yield point
+
+1:
+    // Preempt restore
+#if XCHAL_EXTRA_SA_SIZE > 0
+    addi    a10,  a1, XT_STK_ALIGN_SZ           // where to restore from
+#if XCHAL_EXTRA_SA_ALIGN > 16
+    movi    a12, -XCHAL_EXTRA_SA_ALIGN
+    and     a10, a10, a12                       // align dynamically >16 bytes
+#endif
+    xchal_ncp_load a10, a11, a12, a13, a14
+#endif
+
+#ifdef __XTENSA_WINDOWED_ABI__
+    // Restore a0-a7 for windowed ABI
+    addi     a8,  a1, -32
+    l32i     a0,  a8, 0
+    l32i     a2,  a8, 8
+    l32i     a3,  a8, 12
+    l32i     a4,  a8, 16
+    l32i     a5,  a8, 20
+    l32i     a6,  a8, 24
+    l32i     a7,  a8, 28
+#else
+    // For call0, dispatch exit code expects a15 = original SP
+    addi    a15,  a1, XT_STK_FRMSZ
+#endif
+
+    addi     a1,  a1, XT_STK_FRMSZ              // set up SP for dispatch exit
+
+.Lnested:
+    // Return to the current saved context.
+
+    .endm
+
+#endif /* __ASSEMBLER__ */
+#endif /* XCHAL_HAVE_XEA3 */
 
 #endif /* XTENSA_CONTEXT_H */
 

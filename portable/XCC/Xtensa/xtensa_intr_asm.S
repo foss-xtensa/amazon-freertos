@@ -29,6 +29,8 @@
 #include <xtensa/hal.h>
 #include <xtensa/config/core.h>
 
+#include <FreeRTOSConfig.h>
+
 #include "xtensa_context.h"
 #include "xtensa_config.h"
 
@@ -75,7 +77,7 @@ xt_vpri_mask:     .word   0xFFFFFFFF    /* Virtual priority mask */
     .align  16
 
 xt_interrupt_stack:
-    .space  XT_SYSTEM_STACK_SIZE
+    .space  configISR_STACK_SIZE
 xt_interrupt_stack_top:
 
 
@@ -93,10 +95,10 @@ xt_interrupt_stack_top:
     .section    .intr.data, "aw"
 #endif
 
-    .global xt_interrupt_table
+    .global _xt_interrupt_table
     .align  16
 
-xt_interrupt_table:
+_xt_interrupt_table:
 
 /*
 -------------------------------------------------------------------------------

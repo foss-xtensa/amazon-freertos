@@ -1,4 +1,9 @@
 
+Notes for Version 2.10
+----------------------
+
+- Now supports Xtensa NX processors.
+
 Notes for Version 2.01
 ----------------------
 

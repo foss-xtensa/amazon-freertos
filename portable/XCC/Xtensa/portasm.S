@@ -37,12 +37,19 @@
 */
     .data
     .align      16
+#if 0
     .global     port_IntStack
 port_IntStack:
     .space      configISR_STACK_SIZE
 port_IntStackTop:
     .word       0
+#endif
+    .global     port_switch_flag
 port_switch_flag:
+    .word       0
+
+    .global     port_yield_flag
+port_yield_flag:
     .word       0
 
 
@@ -74,6 +81,10 @@ _frxt_setup_switch:
     s32i    a3, a2, 0
 
     RET(16)
+
+    .size _frxt_setup_switch, . - _frxt_setup_switch
+
+#if XCHAL_HAVE_XEA2
 
 /*
 *******************************************************************************
@@ -120,13 +131,17 @@ _frxt_int_enter:
     movi    a2,  pxCurrentTCB
     l32i    a2,  a2, 0                  /* a2 = current TCB                */
     beqz    a2,  1f
-    s32i    a1,  a2, TCB_TOP_OF_STACK_OFF         /* pxCurrentTCB->pxTopOfStack = SP */
-    movi    a1,  port_IntStackTop       /* a1 = top of intr stack          */
+    s32i    a1,  a2, TCB_TOP_OF_STACK_OFF   /* pxCurrentTCB->pxTopOfStack = SP */
+    movi    a1,  xt_interrupt_stack_top /* a1 = top of intr stack          */
 
 .Lnested:
 1:
     mov     a0,  a12                    /* restore return addr and return  */
     ret
+
+#endif /* XCHAL_HAVE_XEA2 */
+
+#if XCHAL_HAVE_XEA2
 
 /*
 *******************************************************************************
@@ -214,6 +229,8 @@ _frxt_int_exit:
     l32i    a0,  a1, XT_STK_EXIT
     ret
 
+#endif /* XCHAL_HAVE_XEA2 */
+
 /*
 **********************************************************************************************************
 *                                    DISPATCH THE HIGH READY TASK
@@ -245,6 +262,41 @@ _frxt_int_exit:
     .align  4
 _frxt_dispatch:
 
+#if XCHAL_HAVE_XEA3
+    /* Skip "entry" - nothing to save, never returns. */
+
+    movi    a2, PS_STACK_KERNEL | PS_DI     /* Set PS.STACK = Kernel and    */
+    movi    a3, PS_STACK_MASK | PS_DI_MASK  /* disable interrupts.          */
+    xps     a2, a3
+
+    movi    a2, port_yield_flag
+    movi    a3, 1
+    s32i    a3, a2, 0                       /* Indicate thread yield.       */
+
+#ifdef __XTENSA_CALL0_ABI__
+    call0   vTaskSwitchContext  // Get next TCB to resume
+    movi    a2, pxCurrentTCB
+#else
+    movi    a2, pxCurrentTCB
+    call8   vTaskSwitchContext  // Get next TCB to resume
+#endif
+
+    l32i    a3,  a2, 0                      /* a3 = pxCurrentTCB           */
+    l32i    a1,  a3, TCB_TOP_OF_STACK_OFF   /* SP = next_TCB->pxTopOfStack */
+    addi    a1,  a1, XT_STK_FRMSZ           /* Adjust for the dummy frame  */
+
+#ifdef __XTENSA_CALL0_ABI__
+    mov    a15,  a1                         /* Dispatch code expects a15 = old SP */
+#endif
+
+    movi    a0, _xt_dispatch + 3            /* Jump to dispatch code. It will */
+    ret                                     /* check for ready thread or idle */
+                                            /* and handle accordingly.        */
+
+    ill                                     /* Should never get back here. */
+#endif
+
+#if XCHAL_HAVE_XEA2
     #ifdef __XTENSA_CALL0_ABI__
     call0   vTaskSwitchContext  // Get next TCB to resume
     movi    a2, pxCurrentTCB
@@ -276,14 +328,14 @@ _frxt_dispatch:
 skip_lowering_priv:
 #endif
 
-    l32i    a3,  sp, XT_SOL_PS
+    l32i    a3,  sp, XT_STK_PS
     #ifdef __XTENSA_CALL0_ABI__
-    l32i    a12, sp, XT_SOL_A12
-    l32i    a13, sp, XT_SOL_A13
-    l32i    a14, sp, XT_SOL_A14
-    l32i    a15, sp, XT_SOL_A15
+    l32i    a12, sp, XT_STK_A12
+    l32i    a13, sp, XT_STK_A13
+    l32i    a14, sp, XT_STK_A14
+    l32i    a15, sp, XT_STK_A15
     #endif
-    l32i    a0,  sp, XT_SOL_PC
+    l32i    a0,  sp, XT_STK_PC
     #if XCHAL_CP_NUM > 0
     /* Ensure wsr.CPENABLE is complete (should be, it was cleared on entry). */
     rsync
@@ -291,7 +343,7 @@ skip_lowering_priv:
     /* As soons as PS is restored, interrupts can happen. No need to sync PS. */
     wsr     a3,  PS
     #ifdef __XTENSA_CALL0_ABI__
-    addi    sp,  sp, XT_SOL_FRMSZ
+    addi    sp,  sp, XT_STK_FRMSZ
     ret
     #else
     retw
@@ -333,7 +385,7 @@ skip_lowering_priv:
     */
     l32i    a0, sp, XT_STK_EXIT
     ret
-
+#endif /* XCHAL_HAVE_XEA2 */
 
 /*
 **********************************************************************************************************
@@ -356,20 +408,105 @@ skip_lowering_priv:
     .align  4
 vPortYield:
 
+#if XCHAL_HAVE_XEA3
+#ifdef __XTENSA_CALL0_ABI__
+    addi    sp, sp, -16
+    s32i    a0, sp, 0                       /* save return address          */
+#else
+    entry   sp, 48
+    s32i    a0, sp, 0                       /* save return address          */
+    ssai    0
+    spillw                                  /* spill all registers          */
+#endif
+
+    /*
+    Save register state into exception frame. This is safe to do with
+    interrupts enabled, but we will have to revert SP to point above
+    the exception frame because that is what the dispatch code expects.
+    Must disable interrupts before that.
+    */
+
+    movi    a0, .Lret
+    rsr.ps  a2
+    addi    sp, sp, -XT_STK_XFRM_SZ
+    s32i    a0, sp, XT_STK_PC               /* save return PC               */
+    s32i    a2, sp, XT_STK_PS               /* save PS                      */
+#ifdef __XTENSA_CALL0_ABI__
+    s32i    a12, sp, XT_STK_A12             /* callee-saved registers       */
+    s32i    a13, sp, XT_STK_A13
+    s32i    a14, sp, XT_STK_A14
+    s32i    a15, sp, XT_STK_A15
+#endif
+
+    movi    a2, PS_STACK_KERNEL | PS_DI     /* Set PS.STACK = Kernel and    */
+    movi    a8, PS_STACK_MASK | PS_DI_MASK  /* disable interrupts.          */
+    xps     a2, a8
+
+    movi    a3, pxCurrentTCB
+    l32i    a4, a3, 0                       /* a4 = pxCurrentTCB            */
+
+#if XCHAL_CP_NUM > 0
+    /* Save coprocessor callee-saved state (if any). At this point CPENABLE */
+    /* should still reflect which CPs were in use (enabled).                */
+    call0   _xt_coproc_savecs
+
+    /* Clear CPENABLE and give up all co-procs. */
+    l32i    a3, a4, TCB_END_OF_STACK_OFF    /* a3 = pxCurrentTCB->cp_state  */
+    movi    a5, 0
+    s16i    a5, a3, XT_CPENABLE
+    wsr     a5, CPENABLE                    /* disable all co-processors    */
+#endif
+
+    addi    a5, sp, XT_STK_XFRM_SZ - XT_STK_FRMSZ
+    s32i    a5, a4, TCB_TOP_OF_STACK_OFF    /* pxCurrentTCB->pxTopOfStack = SP  */
+    addi    sp, sp, XT_STK_XFRM_SZ          /* restore SP                   */
+
+    call0   _frxt_dispatch                  /* Does not return, see below   */
+
+    /* Execution returns here. Interrupts should be disabled. */
+    /* NOTE: we expect original SP to have been restored. */
+
+    .align  4
+
+.Lret:
+    addi    sp, sp, -XT_STK_XFRM_SZ         /* Prepare to restore state        */
+    l32i    a2, sp, XT_STK_PS               /* Retrieve PS value               */
+#ifdef __XTENSA_CALL0_ABI__
+    l32i    a12, sp, XT_STK_A12             /* Callee-saved registers          */
+    l32i    a13, sp, XT_STK_A13
+    l32i    a14, sp, XT_STK_A14
+    l32i    a15, sp, XT_STK_A15
+#endif
+    addi    sp, sp, XT_STK_XFRM_SZ
+    wsr.ps  a2                              /* Safe to enable interrupts       */
+    rsync
+
+#ifdef __XTENSA_CALL0_ABI__
+    l32i    a0, sp, 0
+    addi    sp, sp, 16
+    ret
+#else
+    l32i    a0, sp, 0
+    retw
+#endif
+#endif /* XCHAL_HAVE_XEA3 */
+
+#if XCHAL_HAVE_XEA2
     #ifdef __XTENSA_CALL0_ABI__
-    addi    sp,  sp, -XT_SOL_FRMSZ
+    addi    a2, sp, -XT_STK_FRMSZ           /* avoid addi/addmi relaxation that */
+    mov     sp, a2                          /* might temporarily move sp up     */
     #else
-    entry   sp,  XT_SOL_FRMSZ
+    entry   sp, XT_STK_FRMSZ
     #endif
 
     rsr     a2,  PS
-    s32i    a0,  sp, XT_SOL_PC
-    s32i    a2,  sp, XT_SOL_PS
+    s32i    a0,  sp, XT_STK_PC
+    s32i    a2,  sp, XT_STK_PS
     #ifdef __XTENSA_CALL0_ABI__
-    s32i    a12, sp, XT_SOL_A12         /* save callee-saved registers      */
-    s32i    a13, sp, XT_SOL_A13
-    s32i    a14, sp, XT_SOL_A14
-    s32i    a15, sp, XT_SOL_A15
+    s32i    a12, sp, XT_STK_A12         /* save callee-saved registers      */
+    s32i    a13, sp, XT_STK_A13
+    s32i    a14, sp, XT_STK_A14
+    s32i    a15, sp, XT_STK_A15
     #else
     /* Spill register windows. Calling xthal_window_spill() causes extra    */
     /* spills and reloads, so we will set things up to call the _nw version */
@@ -380,7 +517,7 @@ vPortYield:
     wsr     a2,  PS
     rsync
     call0   xthal_window_spill_nw
-    l32i    a2,  sp, XT_SOL_PS                    /* restore PS             */
+    l32i    a2,  sp, XT_STK_PS                    /* restore PS             */
     wsr     a2,  PS
     #endif
 
@@ -395,7 +532,7 @@ vPortYield:
     movi    a2,  pxCurrentTCB
     movi    a3,  0
     l32i    a2,  a2, 0                  /* a2 = pxCurrentTCB                */
-    s32i    a3,  sp, XT_SOL_EXIT        /* 0 to flag as solicited frame     */
+    s32i    a3,  sp, XT_STK_EXIT        /* 0 to flag as solicited frame     */
     s32i    sp,  a2, TCB_TOP_OF_STACK_OFF         /* pxCurrentTCB->pxTopOfStack = SP  */
 
     #if XCHAL_CP_NUM > 0
@@ -411,7 +548,7 @@ vPortYield:
     /* Tail-call dispatcher. */
     call0   _frxt_dispatch
     /* Never reaches here. */
-
+#endif /* XCHAL_HAVE_XEA2 */
 
 /*
 **********************************************************************************************************
@@ -439,7 +576,7 @@ vPortYieldFromInt:
 
     ENTRY(16)
 
-    #if XCHAL_CP_NUM > 0
+#if XCHAL_CP_NUM > 0
     /* Save CPENABLE in task's co-processor save area, and clear CPENABLE.  */
     movi    a3, pxCurrentTCB            /* cp_state =                       */
     l32i    a3, a3, 0
@@ -449,15 +586,15 @@ vPortYieldFromInt:
     s16i    a3, a2, XT_CPENABLE         /* cp_state->cpenable = CPENABLE;   */
     movi    a3, 0
     wsr     a3, CPENABLE                /* disable all co-processors        */
-    #endif
+#endif
 
-    #ifdef __XTENSA_CALL0_ABI__
+#ifdef __XTENSA_CALL0_ABI__
     /* Tail-call dispatcher. */
     call0   _frxt_dispatch
     /* Never reaches here. */
-    #else
+#else
     RET(16)
-    #endif
+#endif
 
 /*
 --------------------------------------------------------------------------------
@@ -470,6 +607,16 @@ vPortYieldFromInt:
     .align      4
 
 _xt_task_start:
+#if XCHAL_HAVE_XEA3
+    /* On entry, a8 = task entry point, a9 = top of stack / coproc save area */
+    movi    a0, pxCurrentTCB
+    l32i    a0, a0, 0
+    s32i    a9, a0, TCB_END_OF_STACK_OFF    /* TCB->pxEndOfStack = CP save area */
+    movi    a0, 0                           /* terminate call stack for gdb     */
+    jx      a8
+#endif
+
+#if XCHAL_HAVE_XEA2
     l32i    a0, sp, XT_STK_PS               /* retrieve interruptee's PS        */
     wsr     a0, PS
     l32i    a0, sp, XT_STK_PC               /* retrieve interruptee's PC        */
@@ -478,9 +625,10 @@ _xt_task_start:
     l32i    a3, a3, 0
     l32i    a0, sp, XT_STK_A0               /* retrieve interruptee's A0        */
     l32i    sp, sp, XT_STK_A1               /* remove interrupt stack frame     */
-    s32i    sp, a3, TCB_END_OF_STACK_OFF              /* TCB->pxEndOfStack = CP save area */
+    s32i    sp, a3, TCB_END_OF_STACK_OFF    /* TCB->pxEndOfStack = CP save area */
     rsync                                   /* ensure PS and EPC written        */
     rfe                                     /* PS.EXCM is cleared               */
+#endif
 
 /*
 **********************************************************************************************************

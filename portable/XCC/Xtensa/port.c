@@ -60,6 +60,9 @@
 #if XCHAL_HAVE_INTERRUPTS
 #include <xtensa/tie/xt_interrupt.h>
 #endif
+#if XCHAL_HAVE_ISL || XCHAL_HAVE_KSL || XCHAL_HAVE_PSL
+#include <xtensa/tie/xt_exception_dispatch.h>
+#endif
 
 #include "xtensa_api.h"
 #include "xtensa_rtos.h"
@@ -80,8 +83,10 @@ BaseType_t xPortRaisePrivilege( void );
 
 #endif
 
-// Defined in xtensa_context.S.
+#if XCHAL_CP_NUM > 0
 extern void _xt_coproc_init( void );
+extern void _xt_coproc_exc(XtExcFrame * fp);
+#endif
 
 // Defined in xtensa_vectors.S.
 extern void _xt_task_start( void );
@@ -95,6 +100,10 @@ static uint32_t xt_tick_count;
 #if ( configUSE_TICKLESS_IDLE != 0 )
 // Flag to indicate tick handling should be skipped.
 static volatile uint32_t xt_skip_tick;
+#endif
+
+#if XCHAL_HAVE_XEA3
+int32_t xt_sw_intnum = -1;
 #endif
 
 // Duplicate of inaccessible xSchedulerRunning.
@@ -187,12 +196,47 @@ static void xt_tick_timer_stop( void )
 //-----------------------------------------------------------------------------
 BaseType_t xPortStartScheduler( void )
 {
+    #if XCHAL_HAVE_XEA3
+    extern void xt_sched_handler(void * arg);
+    int32_t i;
+    #endif
+
     // Interrupts are disabled at this point and stack contains PS with
     // enabled interrupts when task context is restored.
 
     #if XCHAL_CP_NUM > 0
     // Initialize co-processor management for tasks. Leave CPENABLE alone.
     _xt_coproc_init();
+
+    #if XCHAL_HAVE_XEA3
+    // Install the coprocessor exception handler.
+    xt_set_exception_handler(EXCCAUSE_CP_DISABLED, _xt_coproc_exc);
+    #endif
+    #endif
+
+    #if XCHAL_HAVE_XEA3
+    // Select a software interrupt to use for scheduling.
+    for (i = 0; i < XCHAL_NUM_INTERRUPTS; i++) {
+        if ((Xthal_inttype[i] == XTHAL_INTTYPE_SOFTWARE) && (Xthal_intlevel[i] == 1)) {
+            xt_sw_intnum = i;
+            break;
+        }
+    }
+
+    if (xt_sw_intnum == -1) {
+        return pdFALSE;
+    }
+
+    /* Set the interrupt handler and enable the interrupt. */
+    xt_set_interrupt_handler(xt_sw_intnum, xt_sched_handler, 0);
+    xt_interrupt_enable(xt_sw_intnum);
+
+    #if XCHAL_HAVE_KSL
+    XT_WSR_KSL(0);
+    #endif
+    #if XCHAL_HAVE_ISL
+    XT_WSR_ISL(0);
+    #endif
     #endif
 
     // Set up and enable timer tick.
@@ -230,10 +274,9 @@ void vPortEndScheduler( void )
 //-----------------------------------------------------------------------------
 // Stack initialization.
 // Reserve coprocessor save area if needed, construct a dummy stack frame and
-// populate it for task startup. Return adjusted top-of-stack pointer, which
-// is also the pointer to the dummy stack frame.
+// populate it for task startup. Return the pointer to the dummy stack frame.
 // (NOTE: the value returned from this function is expected to be stored in
-// pxTCB->pxTopOfStack. In the task wrapper code, we will copy this value into
+// pxTCB->pxTopOfStack. In the task wrapper code, we will set the value of
 // pxTCB->pxEndOfStack, which will then be treated as the coprocessor state
 // area pointer.
 //-----------------------------------------------------------------------------
@@ -248,20 +291,28 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                     void * pvParameters )
 #endif
 {
-    StackType_t *sp, *tp;
+    StackType_t *sp, *tp, *ret;
     XtExcFrame  *frame;
     #if XCHAL_CP_NUM > 0
     uint32_t *p;
     #endif
 
     // Allocate enough space for coprocessor state, align base address. This is the
-    // adjusted top-of-stack.
+    // adjusted top-of-stack and also the start of the coprocessor save area.
     sp = (StackType_t *) ((((uint32_t) pxTopOfStack) - (uint32_t) XT_CP_SIZE) & ~0xF);
 
     // Allocate interrupt stack frame. XT_STK_FRMSZ is always a multiple of 16 bytes
     // so 16-byte alignment is ensured.
     tp = sp - (XT_STK_FRMSZ/sizeof(StackType_t));
+
+    // This is the address we will return.
+    ret = tp;
+
+    #if XCHAL_HAVE_XEA3
+    frame = (XtExcFrame *) (tp + (XT_STK_XTRA_SZ/sizeof(StackType_t)));
+    #else
     frame = (XtExcFrame *) tp;
+    #endif
 
     // Clear the frame (do not use memset() because we don't depend on C library).
     for (; tp < sp; ++tp)
@@ -269,12 +320,15 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
         *tp = 0;
     }
 
-    // Explicitly initialize certain saved registers.
+    // Explicitly initialize certain saved registers. Note that the entry point
+    // is set to be the task wrapper, and the address of the coprocessor save
+    // area (sp) is saved in the dummy frame for the wrapper to use.
+
+    #if XCHAL_HAVE_XEA2
     frame->pc   = (UBaseType_t) pxCode;             // task entrypoint
     frame->a0   = 0;                                // to terminate GDB backtrace
-    frame->a1   = (UBaseType_t) sp;                 // physical top of stack frame
+    frame->a1   = (UBaseType_t) sp;                 // top of stack - CP save area
     frame->exit = (UBaseType_t) _xt_task_start;     // task start wrapper
-
     // Set initial PS to int level 0, EXCM disabled ('rfe' will enable), user mode.
     // Also set entry point argument parameter.
     #ifdef __XTENSA_CALL0_ABI__
@@ -285,6 +339,22 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
     frame->a6 = (UBaseType_t) pvParameters;
     frame->ps = PS_UM | PS_EXCM | PS_WOE | PS_CALLINC(1);
     #endif
+    #endif
+
+    #if XCHAL_HAVE_XEA3
+    frame->a8 = (UBaseType_t) pxCode;             // task entrypoint
+    frame->a9 = (UBaseType_t) sp;                 // top of stack - CP save area
+    frame->pc = (UBaseType_t) _xt_task_start;     // task start wrapper
+    frame->ps = PS_STACK_FIRSTKER;                // initial PS
+    frame->atomctl = 0;                           // initial value
+    // Set entry point arg.
+    #ifdef __XTENSA_CALL0_ABI__
+    frame->a2  = (UBaseType_t) pvParameters;
+    #else
+    frame->a10 = (UBaseType_t) pvParameters;
+    #endif
+    #endif
+
     #if portUSING_MPU_WRAPPERS
     if(!xRunPrivileged) {
        frame->ps |= (1 << PS_RING_SHIFT);
@@ -304,7 +374,7 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
     p[2] = (((uint32_t) p) + 12 + XCHAL_TOTAL_SA_ALIGN - 1) & -XCHAL_TOTAL_SA_ALIGN;
     #endif
 
-    return (StackType_t *) frame;
+    return ret;
 }
 
 //-----------------------------------------------------------------------------
@@ -319,7 +389,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
     // Lock out all interrupts. Otherwise reading and using ccount can
     // get messy. Shouldn't be a problem here since we are about to go
     // to sleep, and the waiti will re-enable interrupts shortly.
-    ps = XT_RSIL( XT_IRQ_LOCK_LEVEL );
+    ps = portENTER_CRITICAL_NESTED();
 
     eSleepStatus = eTaskConfirmSleepModeStatus();
     if ( eSleepStatus == eAbortSleep )
@@ -355,7 +425,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
         ccompare = first_blocked_tick + num_cycles;
         xt_set_ccompare( XT_TIMER_INDEX, ccompare );
         XT_WAITI( 0 );
-        XT_RSIL( XT_IRQ_LOCK_LEVEL );
+        portENTER_CRITICAL_NESTED();
 
         skip_tick = xt_skip_tick;
         now = xt_get_ccount();
@@ -400,7 +470,7 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
         }
     }
 
-    XT_WSR_PS( ps );
+    portEXIT_CRITICAL_NESTED( ps );
 }
 #endif
 

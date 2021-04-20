@@ -74,6 +74,10 @@ WFLAGS      = -Werror -Wall -Wextra
 CCFLAGS     = $(CSTD) $(CFLAGS) $(WFLAGS) -mno-coproc -mlongcalls -ffunction-sections -mno-l32r-flix $(DFLAGS) $(MPUFLAGS)
 ASFLAGS     = $(CCFLAGS)
 
+# File-specific flags
+
+FLAGS_xtensa_vectors_xea3 = -mtext-section-literals
+
 # Include dependency rules (generated using -MD)
 
 -include $(wildcard $(BLDDIR)/*.d)
@@ -97,10 +101,10 @@ $(BLDDIR)/asm-offsets.h : asm-offsets.c $(BLDDIR)/.mkdir
 	$(RM) $(subst /,$(S),$@.exe)
 
 $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
-	$(CC) $(CCFLAGS) $(IFLAGS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
+	$(CC) $(CCFLAGS) $(IFLAGS) $(FLAGS_$*) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
 $(BLDDIR)/%.o : %.S $(BLDDIR)/.mkdir
-	$(CC) $(ASFLAGS) $(IFLAGS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
+	$(CC) $(ASFLAGS) $(IFLAGS) $(FLAGS_$*) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
 clean :
 	$(RM_R) $(BLDDIR)

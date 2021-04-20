@@ -224,7 +224,7 @@
     wsr     a4, INTCLEAR                    /* clear sw or edge-triggered interrupt */
     find_ms_setbit a3, a4, a3, 0            /* a3 = interrupt number */
 
-    movi    a4, xt_interrupt_table
+    movi    a4, _xt_interrupt_table
     addx8   a3, a3, a4                      /* a3 = address of interrupt table entry */
     l32i    a4, a3, XIE_HANDLER             /* a4 = handler address */
     #ifdef __XTENSA_CALL0_ABI__

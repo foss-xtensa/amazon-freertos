@@ -58,6 +58,8 @@ NOERROR: .error "C preprocessor needed for this file: make sure its filename\
 #include <xtensa/overlay_os_asm.h>
 #endif
 
+#if XCHAL_HAVE_XEA2
+
 #if portUSING_MPU_WRAPPERS
     .section "privileged_functions"
 #else
@@ -315,6 +317,8 @@ _xt_context_restore:
 
     ret
 
+#endif /* XCHAL_HAVE_XEA2 */
+
 
 /*******************************************************************************
 
@@ -399,7 +403,12 @@ _xt_coproc_release:
     addi    a4, a3, XCHAL_CP_MAX << 2       /* a4 = top+1 of owner array */
     movi    a5, 0                           /* a5 = 0 (unowned) */
 
+#if XCHAL_HAVE_XEA3
+    movi    a6, PS_DI
+    xps     a6, a6                          /* lock interrupts */
+#else
     rsil    a6, XT_IRQ_LOCK_LEVEL           /* lock interrupts */
+#endif
 
 1:  l32i    a7, a3, 0                       /* a7 = owner at a3 */
     bne     a2, a7, 2f                      /* if (coproc_sa_base == owner) */

@@ -103,8 +103,8 @@ Check some Xtensa configuration requirements and report error if not met.
 Error messages can be customize to the RTOS port.
 */
 
-#if !XCHAL_HAVE_XEA2
-#error "FreeRTOS/Xtensa requires XEA2 (exception architecture 2)."
+#if !XCHAL_HAVE_XEA2 && !XCHAL_HAVE_XEA3
+#error "FreeRTOS/Xtensa requires XEA2 or XEA3 exception architecture."
 #endif
 
 
@@ -241,8 +241,8 @@ Xtensa Port Version.
 
 *******************************************************************************/
 
-#define XTENSA_PORT_VERSION             2.01
-#define XTENSA_PORT_VERSION_STRING      "2.01"
+#define XTENSA_PORT_VERSION             2.10
+#define XTENSA_PORT_VERSION_STRING      "2.10"
 
 #define XT_IRQ_LOCK_LEVEL XCHAL_EXCM_LEVEL
 

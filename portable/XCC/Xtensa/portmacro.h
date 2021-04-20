@@ -109,7 +109,11 @@ static inline void
 portDISABLE_INTERRUPTS(void)
 {
 #if XCHAL_HAVE_INTERRUPTS
-	XT_RSIL (XT_IRQ_LOCK_LEVEL);
+#if XCHAL_HAVE_XEA2
+	xthal_intlevel_set_min (XT_IRQ_LOCK_LEVEL);
+#else
+	xthal_disable_interrupts ();
+#endif
 #endif
 	portbenchmarkINTERRUPT_DISABLE ();
 }
@@ -119,7 +123,11 @@ portENABLE_INTERRUPTS(void)
 {
 	portbenchmarkINTERRUPT_RESTORE (0);
 #if XCHAL_HAVE_INTERRUPTS
-	XT_RSIL (0);
+#if XCHAL_HAVE_XEA2
+	xthal_intlevel_set (0);
+#else
+	xthal_enable_interrupts ();
+#endif
 #endif
 }
 
@@ -169,7 +177,11 @@ portENTER_CRITICAL_NESTED(void)
 	uint32_t state;
 
 #if XCHAL_HAVE_INTERRUPTS
-	state = XT_RSIL (XT_IRQ_LOCK_LEVEL);
+#if XCHAL_HAVE_XEA2
+	state = xthal_intlevel_set_min (XT_IRQ_LOCK_LEVEL);
+#else
+	state = xthal_disable_interrupts ();
+#endif
 #else
 	state = 0;
 #endif
@@ -182,8 +194,11 @@ portEXIT_CRITICAL_NESTED(uint32_t state)
 {
 	portbenchmarkINTERRUPT_RESTORE (state);
 #if XCHAL_HAVE_INTERRUPTS
-	XT_WSR_PS (state);
-	XT_RSYNC ();
+#if XCHAL_HAVE_XEA2
+	xthal_intlevel_set (state);
+#else
+	xthal_restore_interrupts (state);
+#endif
 #endif
 }
 
