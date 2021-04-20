@@ -75,7 +75,7 @@
   all priority levels, but only the ones in your configuration are built.
 
   NOTES on the use of 'call0' for long jumps instead of 'j':
-   1. This file should be assembled with the -mlongcalls option to xt-xcc.
+   1. This file should be assembled with the -mlongcalls option.
    2. The -mlongcalls compiler option causes 'call0 dest' to be expanded to
       a sequence 'l32r a0, dest' 'callx0 a0' which works regardless of the
       distance from the call to the destination. The linker then relaxes

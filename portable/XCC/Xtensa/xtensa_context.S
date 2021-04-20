@@ -47,7 +47,7 @@
 /*  Warn nicely if this file gets named with a lowercase .s instead of .S:  */
 #define NOERROR #
 NOERROR: .error "C preprocessor needed for this file: make sure its filename\
- ends in uppercase .S, or use xt-xcc's -x assembler-with-cpp option."
+ ends in uppercase .S, or use the compiler's -x assembler-with-cpp option."
 
 
 #include "xtensa_rtos.h"

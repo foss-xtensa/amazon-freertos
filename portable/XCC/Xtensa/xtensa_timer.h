@@ -127,7 +127,7 @@ Also because it runs much slower than hardware, it is not possible to achieve
 real-time performance for most applications under the simulator. A frequency
 too low does not allow enough time between timer interrupts, starving threads.
 To obtain a more convenient but non-real-time tick duration on the simulator, 
-compile with xt-xcc option "-DXT_SIMULATOR".
+compile with the option "-DXT_SIMULATOR".
 Adjust this frequency to taste (it's not real-time anyway!).
 */
 #if defined(XT_SIMULATOR) && !defined(XT_CLOCK_FREQ)
@@ -142,7 +142,7 @@ Adjust this frequency to taste (it's not real-time anyway!).
 Default number of timer "ticks" per second (default 100 for 10ms tick).
 RTOS may define this in its own way (if applicable) in xtensa_rtos.h.
 User may redefine this to an optimal value for the application, either by
-editing this here or in xtensa_rtos.h, or compiling with xt-xcc option
+editing this here or in xtensa_rtos.h, or compiling with the option
 "-DXT_TICK_PER_SEC=<value>" where <value> is a suitable number.
 */
 #ifndef XT_TICK_PER_SEC

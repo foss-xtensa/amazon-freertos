@@ -11,11 +11,11 @@ TARGET      = sim
 
 # Tools
 
-CC          = xt-xcc
-AS          = xt-xcc
+CC          = xt-clang
+AS          = xt-clang
 ISS         = xt-run
-XT_CORE     = $(patsubst %-params,%,$(notdir $(shell xt-xcc --show-config=core)))
-CONFIGDIR   = $(shell xt-xcc --show-config=config)
+XT_CORE     = $(patsubst %-params,%,$(notdir $(shell xt-clang --show-config=core)))
+CONFIGDIR   = $(shell xt-clang --show-config=config)
 
 # For platform-specific commands
 
