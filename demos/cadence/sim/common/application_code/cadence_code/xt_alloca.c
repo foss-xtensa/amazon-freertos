@@ -28,7 +28,7 @@
 *                                            ALLOCA TEST
 *
 * This test is designed to trigger an alloca exception on Xtensa and see if it properly moved
-* the base save area. Also tests syscall 0. Applicable to Windowed ABI only (else will always pass).
+* the base save area. Applicable to Windowed ABI only (else will always pass).
 * It does not rely on a C library so can run on practically anything.
 *
 * Target  : All Xtensa configurable and Diamond preconfigured processors.
@@ -96,7 +96,7 @@ static void putstr(const char *s)
 /* Spill the register windows so alloca triggers the exception. */
 static void spill(void)
 {
-    asm ("movi a2, 0; syscall" ::: "a2");
+    xthal_window_spill();
 }
 
 /* Call several levels deep, writing to the stack. */

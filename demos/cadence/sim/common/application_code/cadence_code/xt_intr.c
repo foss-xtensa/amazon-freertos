@@ -25,13 +25,13 @@
 #include    <stdio.h>
 #include    <stdlib.h>
 
-#include "FreeRTOS.h"
-
-
+#include    <xtensa/hal.h>
+#include <xtensa/tie/xt_core.h>
 #ifdef XT_BOARD
 #include    <xtensa/xtbsp.h>
 #endif
-#include    <xtensa/hal.h>
+
+#include "FreeRTOS.h"
 
 #include "xtensa_api.h"
 #include "queue.h"
@@ -49,15 +49,18 @@
 #define TASK_2_PRIO       7
 
 /* Test iterations */
-#define TEST_ITER         10000
+#define TEST_ITER         1000
 
 /* Uncomment this to exercise the s/w prioritization */
 //#define XT_USE_SWPRI      1
 
+#define INT_LO_PRI        (XCHAL_NUM_INTLEVELS - 2)
+#define INT_HI_PRI        (XCHAL_NUM_INTLEVELS - 1)
+
 /* SW interrupt number (computed at runtime) */
 uint32_t uiSwIntNum = 0;
 
-#ifdef XT_USE_SWPRI
+#if defined(XT_USE_SWPRI) || XCHAL_HAVE_XEA3
 /* Second (higher priority) SW interrupt number */
 uint32_t uiSwInt2Num = 0;
 volatile int iFlag = 0;
@@ -65,6 +68,7 @@ volatile int iFlag = 0;
 
 /* Variables used by exception test */
 volatile int iExcCount = 0;
+volatile int junk;
 
 /* Stack size for tasks that do not use the C library. */
 #define     TASK_STK_SIZE_MIN       (XT_STACK_MIN_SIZE)
@@ -120,12 +124,15 @@ void softwareIntHandler(void* arg)
     /* Signal the semaphore */
     err = xSemaphoreGive(xSem);
 
-#ifdef XT_USE_SWPRI
+#if defined(XT_USE_SWPRI) || XCHAL_HAVE_XEA3
     if (uiSwInt2Num) {
         iFlag = 44;
         putchar('<');
         /* Higher priority handler should run right away and change flag */
-        xt_set_intset(1 << uiSwInt2Num);
+        xt_interrupt_trigger(uiSwInt2Num);
+        /* Eat a few cycles here to ensure interrupt is taken */
+        XT_RSYNC();
+        junk++;
         if (iFlag == 44) {
             puts("Error: higher priority handler not run");
             exit(-1);
@@ -136,7 +143,7 @@ void softwareIntHandler(void* arg)
 }
 
 
-#ifdef XT_USE_SWPRI
+#if defined(XT_USE_SWPRI) || XCHAL_HAVE_XEA3
 /* Handler for higher priority interrupt (at same level but prioritized
    higher in software).
 */
@@ -191,7 +198,7 @@ static void Task1(void *pvData)
     xt_set_interrupt_handler(uiSwIntNum, softwareIntHandler, (void*)xSem);
     xt_interrupt_enable(uiSwIntNum);
 
-#ifdef XT_USE_SWPRI
+#if defined(XT_USE_SWPRI) || XCHAL_HAVE_XEA3
     /* Set up the higher priority interrupt if available */
     if (uiSwInt2Num) {
         xt_set_interrupt_handler(uiSwInt2Num, softwareHighHandler, 0);
@@ -275,7 +282,11 @@ static void Task2(void* pvData)
     /* Now test exception handling */
 
     /* Install handler */
+#if XCHAL_HAVE_XEA2
     xt_set_exception_handler(EXCCAUSE_ILLEGAL, illegalInstHandler);
+#else
+    xt_set_exception_handler(EXCCAUSE_INSTRUCTION, illegalInstHandler);
+#endif
 
     /* Force an illegal instruction. The 3-byte form of the illegal
        instruction should be present in all configs. The handler will
@@ -385,66 +396,58 @@ int main(void)
 int main_xt_intr(int argc, char *argv[])
 #endif
 {
-    uint32_t uiSwInts = 0;
-    uint32_t x = 0;
+    int32_t x = -1;
+    int32_t y = -1;
+    int32_t i;
+
     /* Unbuffer stdout */
     setbuf(stdout, 0);
 
     puts("Xtensa interrupt/exception test (xt_intr) running...");
 
-    /* Find a usable sw interrupt at the highest <= EXCM_LEVEL */
-
-#if XCHAL_EXCM_LEVEL >= 4
-    uiSwInts = XCHAL_INTLEVEL4_MASK & XCHAL_INTTYPE_MASK_SOFTWARE;
-#endif
-
-    if (uiSwInts == 0) {
-#if XCHAL_EXCM_LEVEL == 3
-        uiSwInts = XCHAL_INTLEVEL3_MASK & XCHAL_INTTYPE_MASK_SOFTWARE;
-#endif
-    }
-
-    if (uiSwInts == 0) {
-#if XCHAL_EXCM_LEVEL == 2
-        uiSwInts = XCHAL_INTLEVEL2_MASK & XCHAL_INTTYPE_MASK_SOFTWARE;
-#endif
-    }
-
-    if (uiSwInts == 0) {
-        uiSwInts = XCHAL_INTLEVEL1_MASK & XCHAL_INTTYPE_MASK_SOFTWARE;
-    }
-
-    if (uiSwInts == 0) {
-        puts("Can't find any sw interrupts at <= EXCM_LEVEL, test cannot run.\n");
-        /* keep regressions happy */
-        puts("Xtensa interrupt/exception test (xt_intr) PASSED!");
-        exit(0);
-    }
-
-    /* Pick the first (lowest numbered) interrupt */
-    while (!(uiSwInts & 0x1)) {
-        x++;
-        uiSwInts >>= 1;
-    }
-    uiSwIntNum = x;
-
-#ifdef XT_USE_SWPRI
-    /* Try to find another one (this would be higher priority) */
-    uiSwInts >>= 1;
-    x++;
-
-    if (uiSwInts) {
-        while (!(uiSwInts & 0x1)) {
-            x++;
-            uiSwInts >>= 1;
+    /* Find one or two sw interrupts */
+    for (i = 0; i < XCHAL_NUM_INTERRUPTS; i++) {
+        if (Xthal_inttype[i] == XTHAL_INTTYPE_SOFTWARE) {
+            printf("interrupt %d\n", i);
+            if (x == -1) {
+                x = i;
+            }
+            else {
+                y = i;
+                if (Xthal_intlevel[y] != Xthal_intlevel[x])
+                    break;
+            }
         }
-        uiSwInt2Num = x;
     }
 
-    if (uiSwInt2Num == 0) {
-        puts("Warning: second sw interrupt not found, sw priority cannot be tested.");
+    if (x == -1) {
+        printf("No software interrupt found.\n");
+        return 0;
     }
+
+    if (y == -1) {
+        printf("Second sw interrupt not found, nested test will not run.\n");
+        uiSwIntNum = x;
+    }
+    else {
+#if XCHAL_HAVE_XEA2 && defined(XT_USE_SWPRI)
+        if (Xthal_intlevel[x] == Xthal_intlevel[y]) {
+            printf("Both interrupts at same priority, nested test will not run.\n");
+            uiSwIntNum = x;
+        }
+        else {
+            uiSwIntNum  = Xthal_intlevel[x] > Xthal_intlevel[y] ? y : x;
+            uiSwInt2Num = Xthal_intlevel[x] > Xthal_intlevel[y] ? x : y;
+        }
 #endif
+#if XCHAL_HAVE_XEA3
+        xthal_interrupt_pri_set(x, INT_LO_PRI);
+        xthal_interrupt_pri_set(y, INT_HI_PRI);
+        uiSwIntNum  = x;
+        uiSwInt2Num = y;
+#endif
+    }
+
     xTaskCreate( initTask, "initTask", configMINIMAL_STACK_SIZE, (void *)NULL, INIT_TASK_PRIO, NULL );
     /* Finally start the scheduler. */
     vTaskStartScheduler();
