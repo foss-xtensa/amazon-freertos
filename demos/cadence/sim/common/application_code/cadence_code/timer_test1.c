@@ -83,6 +83,9 @@ static void timer(TimerHandle_t t)
     if (td->timer_cnt - td->thread_cnt > 10) {
         printf("%s: bailing out with delta = %d, TICK_CLOCKS = %d\n",
                __func__, td->delta, TICK_CLOCKS);
+        if (rc == 0) {
+            printf("Done\n");
+        }
         exit(rc);
     }
     xSemaphoreGive(td->lock);
@@ -132,6 +135,10 @@ int main(void)
         printf("FAILED! main\n");
         return 1;
     }
+
+    // Set stderr to unbuffered
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     vTaskStartScheduler();
     printf( "vTaskStartScheduler FAILED!\n" );
     return 1;
