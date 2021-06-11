@@ -424,6 +424,12 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
         // Set up for timer interrupt and sleep.
         ccompare = first_blocked_tick + num_cycles;
         xt_set_ccompare( XT_TIMER_INDEX, ccompare );
+#if XCHAL_HAVE_XEA3
+        // Ccompare write will not clear pending interrupt.
+        xt_interrupt_clear( XT_TIMER_INTNUM );
+#endif
+        // Ensure any clearing of pending interrupt takes effect.
+        XT_ISYNC();
         XT_WAITI( 0 );
         portENTER_CRITICAL_NESTED();
 
