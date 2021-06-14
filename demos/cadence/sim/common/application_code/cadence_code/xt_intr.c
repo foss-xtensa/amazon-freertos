@@ -52,7 +52,7 @@
 #define TEST_ITER         1000
 
 /* Uncomment this to exercise the s/w prioritization */
-//#define XT_USE_SWPRI      1
+#define XT_USE_SWPRI      1
 
 #define INT_LO_PRI        (XCHAL_NUM_INTLEVELS - 2)
 #define INT_HI_PRI        (XCHAL_NUM_INTLEVELS - 1)
@@ -122,7 +122,7 @@ void softwareIntHandler(void* arg)
     int err;
 
     /* Signal the semaphore */
-    err = xSemaphoreGive(xSem);
+    err = xSemaphoreGiveFromISR(xSem, NULL);
 
 #if defined(XT_USE_SWPRI) || XCHAL_HAVE_XEA3
     if (uiSwInt2Num) {
@@ -425,9 +425,11 @@ int main_xt_intr(int argc, char *argv[])
         return 0;
     }
 
+    /* Set default */
+    uiSwIntNum = x;
+
     if (y == -1) {
         printf("Second sw interrupt not found, nested test will not run.\n");
-        uiSwIntNum = x;
     }
     else {
 #if XCHAL_HAVE_XEA2 && defined(XT_USE_SWPRI)
