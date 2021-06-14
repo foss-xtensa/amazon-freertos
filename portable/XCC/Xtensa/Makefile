@@ -41,8 +41,13 @@ vpath %.c $(FR_SRCDIR) $(FR_SRCDIR2) $(FR_SRCDIR3) $(XT_SRCDIR)
 vpath %.S $(XT_SRCDIR)
 
 # File lists
+# NOTE: Only heap_4.c is included in the default FreeRTOS build.
+# If you want to use another heap manager then edit this file
+# and specify the one you want.
 
-FR_C_FILES  = $(notdir $(wildcard $(FR_SRCDIR)/*.c)) $(notdir $(wildcard $(FR_SRCDIR2)/*.c)) $(notdir $(wildcard $(FR_SRCDIR3)/*.c))
+FR_C_FILES  = $(notdir $(wildcard $(FR_SRCDIR)/*.c)) \
+	      $(notdir $(wildcard $(FR_SRCDIR3)/*.c)) \
+	      heap_4.c
 XT_C_FILES  = $(notdir $(wildcard $(XT_SRCDIR)/*.c))
 XT_S_FILES  = $(notdir $(wildcard $(XT_SRCDIR)/*.S))
 
