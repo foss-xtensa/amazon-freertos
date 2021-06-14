@@ -100,6 +100,28 @@ static void yield_func(void * arg)
 }
 
 //-----------------------------------------------------------------------------
+// Task creation wrapper.
+//-----------------------------------------------------------------------------
+BaseType_t task_create( TaskFunction_t pvTaskCode,
+                        const char * const pcName,
+                        configSTACK_DEPTH_TYPE usStackDepth,
+                        void * pvParameters,
+                        UBaseType_t uxPriority,
+                        TaskHandle_t *pxCreatedTask)
+{
+    BaseType_t xret;
+
+    xret = xTaskCreate(pvTaskCode, pcName, usStackDepth, pvParameters,
+                       uxPriority, pxCreatedTask);
+    if (xret != pdPASS) {
+        fprintf(stderr, "Error creating task '%s'\n", pcName);
+        exit(-1);
+    }
+
+    return xret;
+}
+
+//-----------------------------------------------------------------------------
 // Helper thread for semaphore tests.
 //-----------------------------------------------------------------------------
 void sem_get(void * arg)
@@ -178,7 +200,7 @@ void sem_test(void * arg)
     // thread has to be unblocked.
 
     uiTaskResponse[0] = 0;
-    xTaskCreate(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
+    task_create(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
 
     total = 0;
     max = 0;
@@ -206,7 +228,7 @@ void sem_test(void * arg)
     // a higher priority thread is unblocked.
 
 
-    xTaskCreate(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
+    task_create(sem_get, "sem_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -330,7 +352,7 @@ void mutex_test(void * arg)
     // Now measure the time taken to unlock a mutex when a lower priority
     // thread has to be unblocked.
     uiTaskResponse[1] = 0;
-    xTaskCreate(mutex_get, "mutex_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
+    task_create(mutex_get, "mutex_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -358,7 +380,7 @@ void mutex_test(void * arg)
     // Now measure the time taken to unlock a mutex + context switch when
     // a higher priority thread is unblocked.
 
-    xTaskCreate(mutex_get2, "mutex_get2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
+    task_create(mutex_get2, "mutex_get2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -497,7 +519,7 @@ void event_test(void * arg)
     // thread has to be unblocked.
 
     uiTaskResponse[1] = 0;
-    xTaskCreate(event_get, "event_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
+    task_create(event_get, "event_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -527,7 +549,7 @@ void event_test(void * arg)
     // a higher priority thread is unblocked.
 
     uiTaskResponse[1] = 0;
-    xTaskCreate(event_get2, "event_get2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
+    task_create(event_get2, "event_get2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -676,7 +698,7 @@ void msgq_test(void* arg)
     // thread has to be unblocked.
 
     uiTaskResponse[1] = 0;
-    xTaskCreate(msg_get, "msg_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
+    task_create(msg_get, "msg_get", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY - 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -705,7 +727,7 @@ void msgq_test(void* arg)
     // a higher priority thread is unblocked.
 
     uiTaskResponse[1] = 0;
-    xTaskCreate(msg_get2, "msg_get2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
+    task_create(msg_get2, "msg_get2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL);
 
     test_total = 0;
     test_max = 0;
@@ -771,9 +793,9 @@ void yieldTest(void)
     // Launch test threads
     uiTaskResponse[0] = uiTaskResponse[1] = uiTaskResponse[2] = 0;
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 2);
-    xTaskCreate( yield_func, "thd1", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY +2), NULL );
-    xTaskCreate( yield_func, "thd2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY +2), NULL );
-    xTaskCreate( yield_func, "thd3", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[2], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY +2), NULL );
+    task_create( yield_func, "thd1", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY +2), NULL );
+    task_create( yield_func, "thd2", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY +2), NULL );
+    task_create( yield_func, "thd3", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[2], portPRIVILEGE_BIT | (PERF_TEST_PRIORITY +2), NULL );
 
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY);
     // Wait for them all to finish
@@ -846,8 +868,8 @@ void unsolicitedTest(void)
     // Launch test threads
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 2);
 
-    xTaskCreate( unsolicited_background, "thd_bg", configMINIMAL_STACK_SIZE, NULL, portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL );
-    xTaskCreate( unsolicited_hipriority, "thd_hi", configMINIMAL_STACK_SIZE, NULL, portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 2), NULL );
+    task_create( unsolicited_background, "thd_bg", configMINIMAL_STACK_SIZE, NULL, portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 1), NULL );
+    task_create( unsolicited_hipriority, "thd_hi", configMINIMAL_STACK_SIZE, NULL, portPRIVILEGE_BIT | (PERF_TEST_PRIORITY + 2), NULL );
 
     portbenchmarkReset(); // If configBENCHMARK is enabled
 
@@ -877,7 +899,7 @@ void semaphoreTest(void)
 {
     uiTaskResponse[1] = 0;
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-    xTaskCreate( sem_test, "sem_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
+    task_create( sem_test, "sem_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[1], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 3);
     while (!uiTaskResponse[1])
     {
@@ -890,7 +912,7 @@ void mutexTest(void)
 {
     uiTaskResponse[0] = 0;
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-    xTaskCreate( mutex_test, "mutex_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
+    task_create( mutex_test, "mutex_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
     while (!uiTaskResponse[0])
     {
@@ -903,7 +925,7 @@ void eventTest(void)
 {
     uiTaskResponse[0] = 0;
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-    xTaskCreate( event_test, "event_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
+    task_create( event_test, "event_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
     while (!uiTaskResponse[0])
     {
@@ -916,7 +938,7 @@ void queueTest(void)
 {
     uiTaskResponse[0] = 0;
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY + 1);
-    xTaskCreate( msgq_test, "msgq_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
+    task_create( msgq_test, "msgq_test", configMINIMAL_STACK_SIZE, (void *)&uiTaskResponse[0], portPRIVILEGE_BIT | PERF_TEST_PRIORITY, NULL );
     vTaskPrioritySet( NULL, PERF_TEST_PRIORITY - 2);
     while (!uiTaskResponse[0])
     {
@@ -933,11 +955,20 @@ void test(void* pArg)
             "affected by the benchmarking code. TURN OFF configBENCHMARK to obtain context switch timing.\n");
     #endif
 
+    /* Delays between tests are inserted to allow the idle task to run.
+       The idle task frees up memory from deleted tasks and makes that
+       memory available to the next test.
+     */
     yieldTest();
+    vTaskDelay(1);
     unsolicitedTest();
+    vTaskDelay(1);
     semaphoreTest();
+    vTaskDelay(1);
     mutexTest();
+    vTaskDelay(1);
     eventTest();
+    vTaskDelay(1);
     queueTest();
     exit(0);
 }
@@ -971,7 +1002,7 @@ int main_perf_test(int argc, char *argv[])
            STK_INTEXC_EXTRA, XT_STK_FRMSZ, XT_CP_SIZE, XT_XTRA_SIZE,
            XT_USER_SIZE, XT_STACK_MIN_SIZE);
 
-    xTaskCreate( test, "test", configMINIMAL_STACK_SIZE, (void *)NULL, portPRIVILEGE_BIT | PERF_TEST_PRIORITY , NULL );
+    task_create( test, "test", configMINIMAL_STACK_SIZE, (void *)NULL, portPRIVILEGE_BIT | PERF_TEST_PRIORITY , NULL );
     /* Finally start the scheduler. */
     vTaskStartScheduler();
     /* Will only reach here if there is insufficient heap available to start
