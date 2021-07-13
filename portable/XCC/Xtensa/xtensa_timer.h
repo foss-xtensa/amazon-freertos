@@ -48,8 +48,6 @@
 #include    <xtensa/corebits.h>
 #include    <xtensa/config/system.h>
 
-#include    "xtensa_rtos.h"     /* in case this wasn't included directly */
-
 #include    <FreeRTOSConfig.h>
 
 /*

@@ -104,14 +104,14 @@ _Mtxunlock(_Rmtx * mtx)
 void *
 _sbrk_r (struct _reent * reent, int32_t incr)
 {
-    extern char _end;
+    extern char _end[];
     extern char _heap_sentry;
     static char * _heap_sentry_ptr = &_heap_sentry;
     static char * heap_ptr;
     char * base;
 
     if (!heap_ptr)
-        heap_ptr = (char *) &_end;
+        heap_ptr = (char *) &_end[0];
 
     base = heap_ptr;
     if (heap_ptr + incr >= _heap_sentry_ptr) {

@@ -96,8 +96,8 @@ extern uint32_t xt_vpri_mask;
 
 /* Handler table is in xtensa_intr_asm.S */
 typedef struct xt_handler_table_entry {
-    void * handler;
-    void * arg;
+    xt_handler handler;
+    void *     arg;
 } xt_handler_table_entry;
 
 #if (XT_USE_INT_WRAPPER || XCHAL_HAVE_XEA3)
