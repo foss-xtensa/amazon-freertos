@@ -382,5 +382,42 @@ xt_sched_handler:
         ret
 #endif
 
+
+//-----------------------------------------------------------------------------
+// Symbols for the debugger to use in identifying interrupt / exception frames.
+//-----------------------------------------------------------------------------
+
+        .global _Interrupt
+        .set    _Interrupt, _xt_dispatch - 1
+        .size   _Interrupt, 1
+
+        .global _GeneralException
+        .set    _GeneralException, _xt_dispatch
+        .size   _GeneralException, .Lexit - _xt_dispatch
+
+        // Size of interrupt frame
+        .global _InterruptFrameSize
+        .set    _InterruptFrameSize, XT_STK_FRMSZ
+
+        // Register save offset in interrupt frame
+        .global _InterruptRegisterSaveOffset
+        .set    _InterruptRegisterSaveOffset, 0x20
+
+        // EPC offset in interrupt frame
+        .global _InterruptEPCSaveOffset
+        .set    _InterruptEPCSaveOffset, 0x10
+
+        // Size of exc frame
+        .global _GeneralExceptionFrameSize
+        .set    _GeneralExceptionFrameSize, XT_STK_FRMSZ
+
+        // Register save offset in exc frame
+        .global _GeneralExceptionRegisterSaveOffset
+        .set    _GeneralExceptionRegisterSaveOffset, 0x20
+
+        // EPC offset in exc frame
+        .global _GeneralExceptionEPCSaveOffset
+        .set    _GeneralExceptionEPCSaveOffset, 0x10
+
 #endif // XCHAL_HAVE_XEA3
 

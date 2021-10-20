@@ -625,6 +625,9 @@ _xt_user_exc:
     #endif
     #endif
 
+    .global _GeneralException
+_GeneralException:                          /* for debugger */
+
     rsr     a2, EXCCAUSE                    /* recover exc cause */
 
     #ifdef XT_INTEXC_HOOKS
@@ -812,6 +815,9 @@ _xt_lowint1:
     #endif
     wsr     a0, PS
     rsync
+
+    .global _Interrupt
+_Interrupt:
 
     /* OK to call C code at this point, dispatch user ISRs */
 
@@ -1738,6 +1744,36 @@ _WindowUnderflow12:
     rfwu
 
 #endif /* XCHAL_HAVE_WINDOWED */
+
+/*
+--------------------------------------------------------------------------------
+Symbols for the debugger.
+--------------------------------------------------------------------------------
+*/
+
+        /* Size of interrupt frame */
+        .global _InterruptFrameSize
+        .set    _InterruptFrameSize, XT_STK_FRMSZ
+
+        /* Register save offset in interrupt frame */
+        .global _InterruptRegisterSaveOffset
+        .set    _InterruptRegisterSaveOffset, 12
+
+        /* EPC offset in interrupt frame */
+        .global _InterruptEPCSaveOffset
+        .set    _InterruptEPCSaveOffset, 4
+
+        /* Size of exc frame */
+        .global _GeneralExceptionFrameSize
+        .set    _GeneralExceptionFrameSize, XT_STK_FRMSZ
+
+        /* Register save offset in exc frame */
+        .global _GeneralExceptionRegisterSaveOffset
+        .set    _GeneralExceptionRegisterSaveOffset, 12
+
+        /* EPC offset in exc frame */
+        .global _GeneralExceptionEPCSaveOffset
+        .set    _GeneralExceptionEPCSaveOffset, 4
 
 #endif /* XCHAL_HAVE_XEA2 */
 
