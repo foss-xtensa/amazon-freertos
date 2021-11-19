@@ -134,7 +134,7 @@
 #ifdef SMALL_TEST
 #define configMINIMAL_STACK_SIZE		(XT_STACK_MIN_SIZE / sizeof(StackType_t))
 #else
-#define configMINIMAL_STACK_SIZE		(XT_STACK_MIN_SIZE > 1024 ? XT_STACK_MIN_SIZE : 1024)
+#define configMINIMAL_STACK_SIZE		((XT_STACK_MIN_SIZE > 1024 ? XT_STACK_MIN_SIZE : 1024) / sizeof(StackType_t))
 #endif
 
 /* The Xtensa port uses a separate interrupt stack. Adjust the stack size */
