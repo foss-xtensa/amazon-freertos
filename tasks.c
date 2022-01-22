@@ -3526,7 +3526,8 @@ static portTASK_FUNCTION( prvIdleTask, pvParameters )
                         if( xExpectedIdleTime >= configEXPECTED_IDLE_TIME_BEFORE_SLEEP )
                         {
                             traceLOW_POWER_IDLE_BEGIN();
-                            portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime );
+                            portSUPPRESS_TICKS_AND_SLEEP_ABS( xNextTaskUnblockTime,
+                                                              xExpectedIdleTime );
                             traceLOW_POWER_IDLE_END();
                         }
                         else
@@ -4392,7 +4393,7 @@ static void prvResetNextTaskUnblockTime( void )
         }
         else
         {
-            mtCOVERAGE_TEST_MARKER();
+            portENABLE_INTERRUPTS();
         }
     }
 

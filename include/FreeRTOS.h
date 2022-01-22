@@ -71,7 +71,7 @@
 
 /* Required if struct _reent is used. */
 #if ( configUSE_NEWLIB_REENTRANT == 1 )
-    #include <reent.h>
+    #include <sys/reent.h>
 #endif
 
 /*
@@ -786,6 +786,11 @@
 
 #ifndef portSUPPRESS_TICKS_AND_SLEEP
     #define portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime )
+#endif
+
+#ifndef portSUPPRESS_TICKS_AND_SLEEP_ABS
+    #define portSUPPRESS_TICKS_AND_SLEEP_ABS( target, xExpectedIdleTime ) \
+        portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime )
 #endif
 
 #ifndef configEXPECTED_IDLE_TIME_BEFORE_SLEEP
