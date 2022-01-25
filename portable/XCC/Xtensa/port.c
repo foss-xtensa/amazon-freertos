@@ -459,6 +459,18 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
                 {
                     vTaskStepTick( ticks );
                     xt_tick_count += ticks;
+#if XCHAL_HAVE_XEA3
+                    // ccompare may be very close in the xt_set_ccompare call
+                    // below, so we cannot reliably call xt_interrupt_clear
+                    // after it. Make sure that timer IRQ is clear when
+                    // xt_set_ccompare( XT_TIMER_INDEX, ccompare ) is called.
+                    // Set ccompare to current ccount to avoid timer IRQ
+                    // arriving in the gap between xt_interrupt_clear
+                    // and the following xt_set_ccompare.
+                    xt_set_ccompare( XT_TIMER_INDEX, xt_get_ccount() );
+                    // Ccompare write will not clear pending interrupt.
+                    xt_interrupt_clear( XT_TIMER_INTNUM );
+#endif
                     xt_set_ccompare( XT_TIMER_INDEX, ccompare );
                     diff = xt_get_ccount() - ccompare;
                     ccompare += xt_tick_cycles;
