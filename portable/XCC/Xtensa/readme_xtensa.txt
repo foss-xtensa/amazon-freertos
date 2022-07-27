@@ -37,9 +37,9 @@ serve as additional examples.
 FreeRTOS for Xtensa configurable processors requires the following minimum 
 processor configuration options:
 
-- Timer interrupt option with at least one interruptible timer.
+- Timer interrupt option with at least one timer.
 - Interrupt option (implied by the timer interrupt option).
-- Exception Architecture 2 (XEA2) (Neither XEA1 nor XEA3 is supported).
+- Exception Architecture Version 2 (XEA2) or Version 3 (XEA3).
 
 Minimal support for certain evaluation boards is provided via a board
 independent XTBSP API implemented by a board specific library distributed
@@ -397,7 +397,7 @@ without editing the source code. Here are some of the more useful ones:
                             higher bit numbers over those with lower bit
                             numbers at the same level. This works only for
                             low and medium priority interrupts that can be
-                            dispatched to C handlers.
+                            dispatched to C handlers, and only for XEA2.
 
 
 Register Usage and Stack Frames
@@ -440,6 +440,7 @@ The Call0 ABI is more conventional and uses registers as follows:
               stack. Details are in the Xtensa Tools manuals.
     a8-a11  = scratch.
     a12-a15 = callee-save (a function must preserve these for its caller).
+
 On a FreeRTOS API call, callee-save registers are saved only when a task
 context switch occurs, and other registers are not saved at all (the caller
 does not expect them to be preserved). On an interrupt, callee-saved
@@ -557,6 +558,9 @@ parameter.
 The following subsections describe the handling of each class of exception
 and interrupt in more detail. Many have nothing to do with FreeRTOS but
 are mentioned because there is code to handle them in xtensa_vectors.S.
+
+Note that the concept of software prioritization and the low/medium/high
+priority discussion applies only to XEA2.
 
 User Exception and Interrupt Handler (Low/Medium Priority):
 
