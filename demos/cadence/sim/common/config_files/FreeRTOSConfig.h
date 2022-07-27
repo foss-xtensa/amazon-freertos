@@ -153,7 +153,7 @@
 #endif
 
 #define configMAX_TASK_NAME_LEN			( 24 )
-#define configUSE_TRACE_FACILITY		0		/* Used by vTaskList in main.c */
+#define configUSE_TRACE_FACILITY		1		/* Used by vTaskList in main.c */
 #define configUSE_STATS_FORMATTING_FUNCTIONS	0	/* Used by vTaskList in main.c */
 #define configUSE_TRACE_FACILITY_2      0		/* Provided by Xtensa port patch */
 #define configBENCHMARK					0		/* Provided by Xtensa port patch */
@@ -233,6 +233,9 @@
 #define configUSE_QUEUE_SETS                1
 #endif
 
+/* Enable runtime stats */
+#define configGENERATE_RUN_TIME_STATS 1
+
 /* Specific config for XTENSA (these can be deleted and they will take default values) */
 
 #if (!defined XT_SIMULATOR) && (!defined XT_BOARD)
@@ -260,5 +263,7 @@
 /* Stack location for legacy tasks */
 #define configLEGACY_TASK_STACK_START   portLEGACY_TASK_STACK_START
 #define configLEGACY_TASK_STACK_END     portLEGACY_TASK_STACK_END
+
+#define configUSE_VARIABLE_FREQUENCY        1
 
 #endif /* FREERTOS_CONFIG_H */
