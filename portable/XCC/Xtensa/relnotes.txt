@@ -1,8 +1,19 @@
 
+
+Notes for Version 2.20
+----------------------
+
+- FreeRTOS kernel version updated to 10.4.4.
+
+- XAF config defaults brought back into 10.4.4-stable branch.
+  Variable frequency support is merged into this branch as well.
+
+
 Notes for Version 2.10
 ----------------------
 
 - Now supports Xtensa NX processors.
+
 
 Notes for Version 2.01
 ----------------------
