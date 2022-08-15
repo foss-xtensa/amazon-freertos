@@ -3526,8 +3526,12 @@ static portTASK_FUNCTION( prvIdleTask, pvParameters )
                         if( xExpectedIdleTime >= configEXPECTED_IDLE_TIME_BEFORE_SLEEP )
                         {
                             traceLOW_POWER_IDLE_BEGIN();
+#if defined (__XTENSA__)
                             portSUPPRESS_TICKS_AND_SLEEP_ABS( xNextTaskUnblockTime,
                                                               xExpectedIdleTime );
+#else
+                            portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime );
+#endif
                             traceLOW_POWER_IDLE_END();
                         }
                         else
@@ -3745,6 +3749,25 @@ static void prvCheckTasksWaitingTermination( void )
 
         #if ( configGENERATE_RUN_TIME_STATS == 1 )
             {
+                #if defined (__XTENSA__)
+                #ifdef portALT_GET_RUN_TIME_COUNTER_VALUE
+                    portALT_GET_RUN_TIME_COUNTER_VALUE( ulTotalRunTime );
+                #else
+                    ulTotalRunTime = portGET_RUN_TIME_COUNTER_VALUE();
+                #endif
+
+                if( ulTotalRunTime > ulTaskSwitchedInTime )
+                {
+                    pxTCB->ulRunTimeCounter += ( ulTotalRunTime - ulTaskSwitchedInTime );
+                }
+                else
+                {
+                    mtCOVERAGE_TEST_MARKER();
+                }
+
+                ulTaskSwitchedInTime = ulTotalRunTime;
+                #endif /* __XTENSA__ */
+
                 pxTaskStatus->ulRunTimeCounter = pxTCB->ulRunTimeCounter;
             }
         #else
@@ -4393,7 +4416,11 @@ static void prvResetNextTaskUnblockTime( void )
         }
         else
         {
+#if defined (__XTENSA__)
             portENABLE_INTERRUPTS();
+#else
+            mtCOVERAGE_TEST_MARKER();
+#endif
         }
     }
 
