@@ -3750,22 +3750,30 @@ static void prvCheckTasksWaitingTermination( void )
         #if ( configGENERATE_RUN_TIME_STATS == 1 )
             {
                 #if defined (__XTENSA__)
-                #ifdef portALT_GET_RUN_TIME_COUNTER_VALUE
-                    portALT_GET_RUN_TIME_COUNTER_VALUE( ulTotalRunTime );
-                #else
-                    ulTotalRunTime = portGET_RUN_TIME_COUNTER_VALUE();
-                #endif
+                    /* If checking the current task, then bring run time
+                     * up to date before reporting. */
+                    if( pxTCB == pxCurrentTCB )
+                    {
+                        taskENTER_CRITICAL();
 
-                if( ulTotalRunTime > ulTaskSwitchedInTime )
-                {
-                    pxTCB->ulRunTimeCounter += ( ulTotalRunTime - ulTaskSwitchedInTime );
-                }
-                else
-                {
-                    mtCOVERAGE_TEST_MARKER();
-                }
+                        #ifdef portALT_GET_RUN_TIME_COUNTER_VALUE
+                            portALT_GET_RUN_TIME_COUNTER_VALUE( ulTotalRunTime );
+                        #else
+                            ulTotalRunTime = portGET_RUN_TIME_COUNTER_VALUE();
+                        #endif
 
-                ulTaskSwitchedInTime = ulTotalRunTime;
+                        if( ulTotalRunTime > ulTaskSwitchedInTime )
+                        {
+                            pxTCB->ulRunTimeCounter += ( ulTotalRunTime - ulTaskSwitchedInTime );
+                        }
+                        else
+                        {
+                            mtCOVERAGE_TEST_MARKER();
+                        }
+
+                        ulTaskSwitchedInTime = ulTotalRunTime;
+                        taskEXIT_CRITICAL();
+                    }
                 #endif /* __XTENSA__ */
 
                 pxTaskStatus->ulRunTimeCounter = pxTCB->ulRunTimeCounter;
