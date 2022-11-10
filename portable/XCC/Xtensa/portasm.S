@@ -449,9 +449,8 @@ vPortYield:
 
     /*
     Save register state into exception frame. This is safe to do with
-    interrupts enabled, but we will have to revert SP to point above
-    the exception frame because that is what the dispatch code expects.
-    Must disable interrupts before that.
+    interrupts enabled, and we will keep the frame allocated when we
+    call the dispatch function.
     */
 
     movi    a0, .Lret
@@ -487,7 +486,6 @@ vPortYield:
 
     addi    a5, sp, XT_STK_XFRM_SZ - XT_STK_FRMSZ
     s32i    a5, a4, TCB_TOP_OF_STACK_OFF    /* pxCurrentTCB->pxTopOfStack = SP  */
-    addi    sp, sp, XT_STK_XFRM_SZ          /* restore SP                   */
 
     call0   _frxt_dispatch                  /* Does not return, see below   */
 

@@ -98,7 +98,7 @@ static void restrictedPrivTask1();
  * vTaskCreate() API function.  The task demonstrates the characteristics of
  * such a task, before simply deleting itself.
  */
-static void oldStylePrivTask1( void *pvParameters );
+static void PrivTask1( void *pvParameters );
 
 /*
  * Just configures any clocks and IO necessary.
@@ -130,7 +130,12 @@ char sharedARRAY  [ 8192 ] mainALIGN_TO( XCHAL_MPU_ALIGN ) __attribute__((sectio
  */
 static volatile int* excp_cnt_p     = (int*)&sharedARRAY[4];
 static volatile int* passes_p       = (int*)&sharedARRAY[8];
+
+#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
 static int  exp_passes = 27;
+#else
+static int  exp_passes = 23;
+#endif
 
 /* Define the constants used to allocate the reg test task stacks.  Note that
 that stack size is defined in words, not bytes. */
@@ -383,11 +388,11 @@ static void restrictedPrivTask1( )
 /* This task is created in Priv mode using the original xTaskCreate() API
  * function.  It should have access to all the memory.
  */
-static void oldStylePrivTask1( void *pvParameters )
+static void PrivTask1( void *pvParameters )
 {
   uint32_t readData;
 
-  puts("\nEntering oldStylePrivTask1\n");
+  puts("\nEntering PrivTask1\n");
     read_mpu_map();
 
   check_mpu((char*)__FUNCTION__ , portDFLT_KERNCODE_ACCESS, portDFLT_KERNDATA_ACCESS, portDFLT_UNUSED_MEM_ACCESS);
@@ -401,19 +406,21 @@ static void oldStylePrivTask1( void *pvParameters )
   /* Write privileged code - exception expected */
   TEST(1, "3rd test", *( volatile uint32_t *) privileged_functions_start = 1);
 
-  puts("oldStylePrivTask1: Exiting\n");
+  puts("PrivTask1: Exiting\n");
   vTaskDelete( NULL );
   return;
 }
 
-/* This task is created in User mode using the original xTaskCreate() API
- * function.  It should have access only to its stack.
+#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
+/* This task is created in User mode using the xTaskCreateStatic() API.
+ * Note that xTaskCreate() can no longer be used to create nonprivileged
+ * tasks. It should have access only to its stack.
  */
-static void oldStyleUserTask1( void *pvParameters )
+static void staticUserTask1( void *pvParameters )
 {
   uint32_t readData;
 
-  puts("\nEntering oldStyleUserTask1\n");
+  puts("\nEntering staticUserTask1\n");
 
   /* Tests below can't increment *passed_p because this task doesn't
    * have write access there. Write attempts cause exceptions that
@@ -429,10 +436,11 @@ static void oldStyleUserTask1( void *pvParameters )
   /* Cannot write privileged code */
   TEST(1, "4th test", readData = *( volatile uint32_t *) privileged_functions_start);
 
-  puts("oldStyleUserTask1: Exiting\n");
+  puts("staticUserTask1: Exiting\n");
   vTaskDelete( NULL );
   return;
 }
+#endif
 
 /* Idle task is created the last, at the lowest priority. Thus it'll running
  * after the other threads have finished. Simply exit with ret val zero.
@@ -520,6 +528,12 @@ void setupMPU() {
 
 int main( void )
 {
+#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
+  /* Used by static user task below. */
+  static StaticTask_t xTCB;
+  static StackType_t uxStack[ 8192 ] mainALIGN_TO( XCHAL_MPU_ALIGN );
+#endif
+
    puts("(MAIN)    Entering...\n");
   /* Install handler for prohibited access*/
   xt_set_exception_handler(EXCCAUSE_STORE_PROHIBITED, privilegedStoreException);
@@ -535,9 +549,9 @@ int main( void )
     exit(1);
   }
 
-  puts("(MAIN)    xTaskCreate oldStylePrivTask1\n");
-  xTaskCreate(oldStylePrivTask1,           /* The function that implements the task. */
-              "oldStylePrivTask1",         /* Text name for the task. */
+  puts("(MAIN)    xTaskCreate PrivTask1\n");
+  xTaskCreate(PrivTask1,                   /* The function that implements the task. */
+              "PrivTask1",                 /* Text name for the task. */
               8192,                        /* Stack depth in words. */
               NULL,                        /* Task parameters. */
               ( 5 | portPRIVILEGE_BIT ),   /* Priority and mode. */
@@ -548,18 +562,21 @@ int main( void )
     exit(1);
   }
 
-  puts("(MAIN)    xTaskCreate oldStyleUserTask1\n");
-  xTaskCreate(oldStyleUserTask1,           /* The function that implements the task. */
-              "oldStyleUserTask1",         /* Text name for the task. */
-              8192,                        /* Stack depth in words. */
-              NULL,                        /* Task parameters. */
-              ( 5 ),                       /* Priority and mode. */
-              NULL                         /* Handle. */
-              );
+#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
+  puts("(MAIN)    xTaskCreateStatic staticUserTask1\n");
+  xTaskCreateStatic(staticUserTask1,     /* The function that implements the task. */
+                    "staticUserTask1",     /* Text name for the task. */
+                    8192,                  /* Stack depth in words. */
+                    NULL,                  /* Task parameters. */
+                    ( 5 ),                 /* Priority and mode. */
+                    uxStack,               /* Stack buffer. */
+                    xTCB                   /* TCB buffer. */
+                    );
   if (xtMPUError) {
     printf("Thread Create FAILED!, error:%d\n", xtMPUError);
     exit(1);
   }
+#endif
 
   puts("(MAIN)    xTaskCreateRestricted restrictedPrivTask1\n");
   xTaskCreateRestricted( &restrictedPrivTask1Params, NULL );

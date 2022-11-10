@@ -41,12 +41,13 @@
 /* Task priorities. */
 /*
  * NOTE: the consumer runs at a higher priority than the producer so as to
- * avoid overflowing the message queue.
+ * avoid overflowing the message queue. Also note: if privileged/user mode
+ * is enabled, these tasks are set up to run in privileged mode only.
 */
-#define INIT_TASK_PRIO    5
-#define TASK_0_PRIO       6
-#define TASK_1_PRIO       8
-#define TASK_2_PRIO       7
+#define INIT_TASK_PRIO    (5 | portPRIVILEGE_BIT)
+#define TASK_0_PRIO       (6 | portPRIVILEGE_BIT)
+#define TASK_1_PRIO       (8 | portPRIVILEGE_BIT)
+#define TASK_2_PRIO       (7 | portPRIVILEGE_BIT)
 
 /* Test iterations */
 #define TEST_ITER         1000

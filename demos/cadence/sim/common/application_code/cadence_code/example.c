@@ -39,17 +39,17 @@
 #include <stdio.h>
 #endif
 
+// If MPU support is enabled, these tasks will have to be created as
+// privileged. xTaskCreate() does not support nonprivileged task creation.
 
-#define NEWLIB_MUTEX_PRIO       6  // prio above any task that uses C library
-#define CONS_MUTEX_PRIO         5  // prio above any task doing line output
-#define INIT_TASK_PRIO          4
-#define COUNT_TASK_PRIO         3
-#define REPORT_TASK_PRIO        2
+#define INIT_TASK_PRIO          (4 | portPRIVILEGE_BIT)
+#define COUNT_TASK_PRIO         (3 | portPRIVILEGE_BIT)
+#define REPORT_TASK_PRIO        (2 | portPRIVILEGE_BIT)
 
 #ifdef XT_BOARD
 #include <xtensa/xtbsp.h>
 // A low priority task puts something on the display for equipped boards.
-#define DISPLAY_TASK_PRIO       1
+#define DISPLAY_TASK_PRIO       (1 | portPRIVILEGE_BIT)
 #endif
 
 // Default task stack size.

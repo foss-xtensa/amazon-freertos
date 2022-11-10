@@ -70,6 +70,15 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+/* Heap area (see heap_4.c). When MPU in use, align it to the MPU
+   region boundary to avoid overlapping with non-heap data. */
+#if portUSING_MPU_WRAPPERS
+#define HEAP_SIZE    ((configTOTAL_HEAP_SIZE + XCHAL_MPU_ALIGN - 1) & -XCHAL_MPU_ALIGN)
+PRIVILEGED_DATA uint8_t ucHeap[ HEAP_SIZE ] __attribute__((aligned(XCHAL_MPU_ALIGN)));
+#else
+uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+#endif
+
 #if portUSING_MPU_WRAPPERS
 /* Configure a number of standard MPU regions that are used by all tasks. */
 extern BaseType_t prvSetupMPU( void ) PRIVILEGED_FUNCTION;

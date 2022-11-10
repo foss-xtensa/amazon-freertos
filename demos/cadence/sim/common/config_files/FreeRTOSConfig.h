@@ -10,12 +10,12 @@
     the terms of the GNU General Public License (version 2) as published by the
     Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
 
-	***************************************************************************
+    ***************************************************************************
     >>!   NOTE: The modification to the GPL is included to allow you to     !<<
     >>!   distribute a combined work that includes FreeRTOS without being   !<<
     >>!   obliged to provide the source code for proprietary components     !<<
     >>!   outside of the FreeRTOS kernel.                                   !<<
-	***************************************************************************
+    ***************************************************************************
 
     FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
     WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -37,17 +37,17 @@
     ***************************************************************************
 
     http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
-	the FAQ page "My application does not run, what could be wrong?".  Have you
-	defined configASSERT()?
+    the FAQ page "My application does not run, what could be wrong?".  Have you
+    defined configASSERT()?
 
-	http://www.FreeRTOS.org/support - In return for receiving this top quality
-	embedded software for free we request you assist our global community by
-	participating in the support forum.
+    http://www.FreeRTOS.org/support - In return for receiving this top quality
+    embedded software for free we request you assist our global community by
+    participating in the support forum.
 
-	http://www.FreeRTOS.org/training - Investing in training allows your team to
-	be as productive as possible as early as possible.  Now you can receive
-	FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
-	Ltd, and the world's leading authority on the world's leading RTOS.
+    http://www.FreeRTOS.org/training - Investing in training allows your team to
+    be as productive as possible as early as possible.  Now you can receive
+    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
+    Ltd, and the world's leading authority on the world's leading RTOS.
 
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool, a DOS
@@ -81,7 +81,7 @@
  *-----------------------------------------------------------------------------
  */
 
-#define configRECORD_STACK_HIGH_ADDRESS		1
+#define configRECORD_STACK_HIGH_ADDRESS     1
 
 /*
  *-----------------------------------------------------------------------------
@@ -99,28 +99,28 @@
  *-----------------------------------------------------------------------------
  */
 
-#define configUSE_PREEMPTION			1
-#define configUSE_IDLE_HOOK				0
+#define configUSE_PREEMPTION            1
+#define configUSE_IDLE_HOOK             0
 
 #ifdef SMALL_TEST
-#define configUSE_TICK_HOOK				0
+#define configUSE_TICK_HOOK             0
 #else
-#define configUSE_TICK_HOOK				1
+#define configUSE_TICK_HOOK             1
 #endif
 
-#define configTICK_RATE_HZ				( 1000 )
+#define configTICK_RATE_HZ              ( 1000 )
 
 /* Use port-defined tickless idle */
-#define configUSE_TICKLESS_IDLE 		2
+#define configUSE_TICKLESS_IDLE         2
 
 /* Default clock rate for simulator */
-#define configCPU_CLOCK_HZ				50000000
+#define configCPU_CLOCK_HZ              50000000
 
 /* This has impact on speed of search for highest priority */
 #ifdef SMALL_TEST
-#define configMAX_PRIORITIES			( 7 )
+#define configMAX_PRIORITIES            ( 7 )
 #else
-#define configMAX_PRIORITIES			( 25 )
+#define configMAX_PRIORITIES            ( 25 )
 #endif
 
 /* Minimal stack size. This may need to be increased for your application */
@@ -132,87 +132,90 @@
 #endif
 
 #ifdef SMALL_TEST
-#define configMINIMAL_STACK_SIZE		(XT_STACK_MIN_SIZE / sizeof(StackType_t))
+#define configMINIMAL_STACK_SIZE        (XT_STACK_MIN_SIZE / sizeof(StackType_t))
 #else
-#define configMINIMAL_STACK_SIZE		((XT_STACK_MIN_SIZE > 1024 ? XT_STACK_MIN_SIZE : 1024) / sizeof(StackType_t))
+#define configMINIMAL_STACK_SIZE        ((XT_STACK_MIN_SIZE > 1024 ? XT_STACK_MIN_SIZE : 1024) / sizeof(StackType_t))
 #endif
 
 /* The Xtensa port uses a separate interrupt stack. Adjust the stack size */
 /* to suit the needs of your specific application.                        */
 /* NOTE: the size is defined in bytes.                                    */
 #ifndef configISR_STACK_SIZE
-#define configISR_STACK_SIZE			2048
+#define configISR_STACK_SIZE            2048
 #endif
 
 /* Minimal heap size to make sure examples can run on memory limited
    configs. Adjust this to suit your system. */
 #ifdef SMALL_TEST
-#define configTOTAL_HEAP_SIZE			( ( size_t ) (16 * 1024) )
+#define configTOTAL_HEAP_SIZE           ( ( size_t ) (16 * 1024) )
 #else
-#define configTOTAL_HEAP_SIZE			( ( size_t ) (256 * 1024) )
+#define configTOTAL_HEAP_SIZE           ( ( size_t ) (256 * 1024) )
 #endif
 
-#define configMAX_TASK_NAME_LEN			( 24 )
-#define configUSE_TRACE_FACILITY		1		/* Used by vTaskList in main.c */
-#define configUSE_STATS_FORMATTING_FUNCTIONS	0	/* Used by vTaskList in main.c */
-#define configUSE_TRACE_FACILITY_2      0		/* Provided by Xtensa port patch */
-#define configBENCHMARK					0		/* Provided by Xtensa port patch */
-#define configUSE_16_BIT_TICKS			0
-#define configIDLE_SHOULD_YIELD			0
-#define configQUEUE_REGISTRY_SIZE		0
+/* Heap space allocated by Xtensa port layer. */
+#define configAPPLICATION_ALLOCATED_HEAP        1
+
+#define configMAX_TASK_NAME_LEN                 ( 24 )
+#define configUSE_TRACE_FACILITY                1   /* Used by vTaskList in main.c */
+#define configUSE_STATS_FORMATTING_FUNCTIONS    0   /* Used by vTaskList in main.c */
+#define configUSE_TRACE_FACILITY_2              0   /* Provided by Xtensa port patch */
+#define configBENCHMARK                         0   /* Provided by Xtensa port patch */
+#define configUSE_16_BIT_TICKS                  0
+#define configIDLE_SHOULD_YIELD                 0
+#define configQUEUE_REGISTRY_SIZE               0
 
 #ifdef SMALL_TEST
-#define configUSE_MUTEXES				1
-#define configUSE_RECURSIVE_MUTEXES		1
-#define configUSE_COUNTING_SEMAPHORES	1
-#define configCHECK_FOR_STACK_OVERFLOW	0
+#define configUSE_MUTEXES               1
+#define configUSE_RECURSIVE_MUTEXES     1
+#define configUSE_COUNTING_SEMAPHORES   1
+#define configCHECK_FOR_STACK_OVERFLOW  0
 #else
-#define configUSE_MUTEXES				1
-#define configUSE_RECURSIVE_MUTEXES		1
-#define configUSE_COUNTING_SEMAPHORES	1
-#define configCHECK_FOR_STACK_OVERFLOW	2
+#define configUSE_MUTEXES               1
+#define configUSE_RECURSIVE_MUTEXES     1
+#define configUSE_COUNTING_SEMAPHORES   1
+#define configCHECK_FOR_STACK_OVERFLOW  2
 #endif
 
 /* Co-routine definitions. */
-#define configUSE_CO_ROUTINES 			0
+#define configUSE_CO_ROUTINES           0
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 /* Set the following definitions to 1 to include the API function, or zero
    to exclude the API function. */
 
-#define INCLUDE_vTaskPrioritySet			1
-#define INCLUDE_uxTaskPriorityGet			1
-#define INCLUDE_vTaskDelete					1
-#define INCLUDE_vTaskCleanUpResources		0
-#define INCLUDE_vTaskSuspend				1
-#define INCLUDE_vTaskDelayUntil				1
-#define INCLUDE_vTaskDelay					1
-#define INCLUDE_uxTaskGetStackHighWaterMark	1
-#define INCLUDE_xTaskGetCurrentTaskHandle	1
+#define INCLUDE_vTaskPrioritySet            1
+#define INCLUDE_uxTaskPriorityGet           1
+#define INCLUDE_vTaskDelete                 1
+#define INCLUDE_vTaskCleanUpResources       0
+#define INCLUDE_vTaskSuspend                1
+#define INCLUDE_vTaskDelayUntil             1
+#define INCLUDE_vTaskDelay                  1
+#define INCLUDE_uxTaskGetStackHighWaterMark 1
+#define INCLUDE_xTaskGetCurrentTaskHandle   1
 
 /* The priority at which the tick interrupt runs.  This should probably be
    kept at 1. */
-#define configKERNEL_INTERRUPT_PRIORITY		1
+#define configKERNEL_INTERRUPT_PRIORITY     1
 
 /* The maximum interrupt priority from which FreeRTOS.org API functions can
    be called.  Only API functions that end in ...FromISR() can be used within
    interrupts. */
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY	XCHAL_EXCM_LEVEL
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY    XCHAL_EXCM_LEVEL
 
 /* XT_USE_THREAD_SAFE_CLIB is defined in xtensa_config.h and can be
    overridden from the compiler/make command line. The small test
    however always disables C lib thread safety to minimize size. */
 #ifdef SMALL_TEST
-  #define configUSE_NEWLIB_REENTRANT		0
+  #define configUSE_NEWLIB_REENTRANT        0
 #else
 #if (XT_USE_THREAD_SAFE_CLIB > 0u)
   #if XT_HAVE_THREAD_SAFE_CLIB
-    #define configUSE_NEWLIB_REENTRANT		1
+    #define configUSE_NEWLIB_REENTRANT      1
   #else
     #error "Error: thread-safe C library support not available for this C library."
   #endif
 #else
-  #define configUSE_NEWLIB_REENTRANT		0
+  #define configUSE_NEWLIB_REENTRANT        0
 #endif
 #endif
 
@@ -224,9 +227,9 @@
 #define configTIMER_TASK_STACK_DEPTH        configMINIMAL_STACK_SIZE
 
 #ifdef SMALL_TEST
-#define INCLUDE_xTimerPendFunctionCall		0
-#define INCLUDE_eTaskGetState				0
-#define configUSE_QUEUE_SETS				0
+#define INCLUDE_xTimerPendFunctionCall      0
+#define INCLUDE_eTaskGetState               0
+#define configUSE_QUEUE_SETS                0
 #else
 #define INCLUDE_xTimerPendFunctionCall      1
 #define INCLUDE_eTaskGetState               1
@@ -250,7 +253,7 @@
 #endif
 
 #if configUSE_TRACE_FACILITY_2
-#define configASSERT_2						1	/* Specific to Xtensa port */
+#define configASSERT_2                      1   /* Specific to Xtensa port */
 #endif
 
 #endif
@@ -260,9 +263,10 @@
 /* Static limit for number of configurable regions per task */
 #define configNUM_CONFIGURABLE_REGIONS  3
 
+/* This option is currently *disabled* */
 /* Stack location for legacy tasks */
-#define configLEGACY_TASK_STACK_START   portLEGACY_TASK_STACK_START
-#define configLEGACY_TASK_STACK_END     portLEGACY_TASK_STACK_END
+// #define configLEGACY_TASK_STACK_START   portLEGACY_TASK_STACK_START
+// #define configLEGACY_TASK_STACK_END     portLEGACY_TASK_STACK_END
 
 #define configUSE_VARIABLE_FREQUENCY        1
 

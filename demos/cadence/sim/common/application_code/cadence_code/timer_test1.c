@@ -31,8 +31,8 @@
 
 #include "xtensa_timer.h"
 
-#define INIT_TASK_PRIO 4
-#define TASK_STK_SIZE 8192
+#define INIT_TASK_PRIO      (4 + portPRIVILEGE_BIT)
+#define TASK_STK_SIZE       8192
 
 struct timer_data
 {

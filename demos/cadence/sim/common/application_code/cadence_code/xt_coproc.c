@@ -31,8 +31,6 @@
 * It is a simple test that uses only the floating point co-processor and single-precision floats.
 *
 * It will also run on an Xtensa core configuration without a floating-point co-processor.
-* It does not rely on a C library so can run on practically anything.
-* If compiled with C library support (THREAD_SAFE_NEWLIB), uses printf() instead of putstr().
 *
 * This test normally has 4 tasks of equal priority round-robin with a single-tick timeslice. 
 * Since FreeRTOS does not support multiple tasks at the same priority, this version of the test
@@ -69,7 +67,7 @@
 
 #if XT_USE_THREAD_SAFE_CLIB > 0u
 /* Uncomment to turn on diagnostics to help debug. Needs thread-safe printf(). */
-//#define DIAGNOSTICS
+#define DIAGNOSTICS    1
 #endif
 
 /* Stack size for tasks that do not use the C library or the coprocessors */
@@ -114,29 +112,6 @@ static float    expect[NTASKS];
 *                                             LOCAL FUNCTIONS
 *********************************************************************************************************
 */
-
-#if XT_USE_THREAD_SAFE_CLIB > 0u
-#define putstr(s)  printf(s)
-#else
-/* Output a simple string to the console. */
-static void putstr(const char *s)
-{
-    int c;
-
-    while ((c = *s) != '\0') {
-        if (c == '\n') {
-            outbyte('\r');
-            outbyte('\n');
-        }
-        else if (iscntrl(c) && c != '\r') {
-            outbyte('^');
-            outbyte('@' + c);
-        }
-        else outbyte(c);
-        ++s;
-    }
-}
-#endif /* XT_USE_THREAD_SAFE_CLIB */
 
 /*
 Shared function that does a convergent iterative floating point computation
@@ -263,28 +238,28 @@ static void Init_Task(void *pdata)
 	err = xTaskCreate(Task0, "Task0", TASK_STK_SIZE_STD, NULL, TASK0_PRIO, &Task_TCB[0]);
     if (err != pdPASS)
     {
-        putstr(TEST_PFX " FAILED to create Task0\n");
+        puts("FAILED to create Task0\n");
         goto done;
     }
 
 	err = xTaskCreate(Task1, "Task1", TASK_STK_SIZE_STD, NULL, TASK1_PRIO, &Task_TCB[1]);
     if (err != pdPASS)
     {
-        putstr(TEST_PFX " FAILED to create Task1\n");
+        puts("FAILED to create Task1\n");
         goto done;
     }
 
 	err = xTaskCreate(Task2, "Task2", TASK_STK_SIZE_STD, NULL, TASK2_PRIO, &Task_TCB[2]);
     if (err != pdPASS)
     {
-        putstr(TEST_PFX " FAILED to create Task2\n");
+        puts("FAILED to create Task2\n");
         goto done;
     }
 
 	err = xTaskCreate(Task3, "Task3", TASK_STK_SIZE_STD, NULL, TASK3_PRIO, &Task_TCB[3]);
     if (err != pdPASS)
     {
-        putstr(TEST_PFX " FAILED to create Task3\n");
+        puts("FAILED to create Task3\n");
         goto done;
     }
 
@@ -308,9 +283,9 @@ static void Init_Task(void *pdata)
 
     /* Report results. */
     #ifdef DIAGNOSTICS
-    printf("(%lu ticks)\n", t1-t0);
+    printf("(%u ticks)\n", t1-t0);
     for (i=0; i<NTASKS; ++i)
-        printf("result[%u] == %f\n", i, result[i]);
+        printf("result[%u] == %f, exp = %f\n", i, result[i], expect[i]);
     #endif
     for (i=0; i<NTASKS; ++i) {
         if (result[i] != expect[i]) {
@@ -318,14 +293,14 @@ static void Init_Task(void *pdata)
             #ifdef XT_BOARD
             xtbsp_display_string("xt_coproc FAILED");
             #endif
-            putstr(TEST_PFX " FAILED!\n");
+            puts("xt_coproc FAILED!\n");
             goto done;
         }
     }
     #ifdef XT_BOARD
     xtbsp_display_string("xt_coproc PASSED");
     #endif
-    putstr(TEST_PFX " PASSED!\n");
+    puts("xt_coproc PASSED!\n");
 
 done:
     #ifdef XT_SIMULATOR
@@ -374,20 +349,19 @@ int main_xt_coproc(int argc, char *argv[])
     int     err = 0;
     int     exit_code = 0;
 
-    putstr("\nNumber of coprocessors = ");
-    outbyte('0' + XCHAL_CP_NUM);
-    putstr("\nYou should verify that there is a float coprocessor!\n");
+    printf("Number of coprocessors = %d\n", XCHAL_CP_NUM);
+    printf("You should verify that there is a float coprocessor!\n");
 
     #ifdef XT_BOARD
     xtbsp_display_string("xt_coproc test");
     #endif
-    putstr(TEST_PFX " running...\n");
+    puts("Running...\n");
 
     /* Create the control task initially with the high priority. */
 	err = xTaskCreate(Init_Task, "Init_Task", TASK_STK_SIZE_STD, NULL, TASK_INIT_PRIO, NULL);
     if (err != pdPASS)
     {
-        putstr(TEST_PFX " FAILED to create Init_Task\n");
+        puts("FAILED to create Init_Task\n");
         goto done;
     }
 
