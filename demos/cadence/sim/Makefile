@@ -94,7 +94,8 @@ CFLAGS     ?= -O2 -Os -g -Wall -Werror
 CCFLAGS     = $(CFLAGS) -ffunction-sections -mlongcalls $(DFLAGS) $(MPUFLAGS)
 LDFLAGS    ?= -Wl,--gc-sections $(CFLAGS)
 
-mpu_basic_CCFLAGS = -O0
+CFLAGS_mpu_basic = -O0
+CFLAGS_xt_coproc = -O3
 
 # use make DEBUG=1 to get MPU debug prints
 ifeq ($(DEBUG),1)
@@ -147,7 +148,7 @@ $(EXE) : $(BLDDIR)/%.exe : $(BLDDIR)/%.o $(OSLIB) $(MPULSP)
 	$(CC) -o $@ $< -mlsp=$(LSPPATH) $(LDFLAGS) $(OSLIB) -lxtutil
 
 $(OBJS) : $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
-	$(CC) $(CCFLAGS) $($(%*)_CFLAGS) $(INCS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
+	$(CC) $(CCFLAGS) $(CFLAGS_$*) $(INCS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
 
 $(OSLIB) ::
 	$(MAKE) -f $(OSROOT)$(S)Makefile all TARGET=$(TARGET) CFLAGS="$(CFLAGS)" SRCROOT=$(OSROOT) BLDROOT=$(BLDROOT) MPU=$(MPU)

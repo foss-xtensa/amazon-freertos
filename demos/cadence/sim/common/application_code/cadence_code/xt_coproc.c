@@ -120,17 +120,21 @@ a specified number of iterations and returns the result.
     x = initial coefficient in range [0,1), close to 1 slows convergence.
     z = arbitrary initial value > 0.
 */
+__attribute__((noinline))
 static float crunch(unsigned n, float x, float z)
 {
-    unsigned i,j;
-    float mx = -x;
-    float result = z;
+    unsigned i = 0;
+    unsigned j = 0;
+    float    mx = -x;
+    float    result = z;
 
     for (i=0; i<n; i+=j) {
         for (j=0; j < n>>3; ++j) {
             result += x * z;
             x = mx * x;
         }
+        // printf(" %f %f\n", result, z);
+
         /*
         Solicit context-switch to exercise exception handler not saving state.
         However compiler saves/restores state around function calls, so test 

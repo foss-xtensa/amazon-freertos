@@ -633,6 +633,11 @@ vPortYieldFromInt:
     .align      4
 
 _xt_task_start:
+#if XCHAL_CP_NUM > 0
+    movi    a0, 0
+    wsr     a0, CPENABLE                    /* disable all coprocessors */
+#endif
+
 #if XCHAL_HAVE_XEA3
     /* On entry, a8 = task entry point, a9 = top of stack / coproc save area */
     movi    a0, pxCurrentTCB
