@@ -164,9 +164,9 @@ _xt_context_save:
     s32i    a3,  sp, XT_STK_LCOUNT
     #endif
 
-    #if XT_USE_SWPRI
+    #ifdef XT_USE_SWPRI
     /* Save virtual priority mask */
-    movi    a3,  _xt_vpri_mask
+    movi    a3,  xt_vpri_mask
     l32i    a3,  a3, 0
     s32i    a3,  sp, XT_STK_VPRI
     #endif
@@ -310,12 +310,12 @@ _xt_context_restore:
 
     #ifdef XT_USE_SWPRI
     /* Restore virtual interrupt priority and interrupt enable */
-    movi    a3,  _xt_intdata
-    l32i    a4,  a3, 0                  /* a4 = _xt_intenable */
-    l32i    a5,  sp, XT_STK_VPRI        /* a5 = saved _xt_vpri_mask */
+    movi    a3,  xt_intdata
+    l32i    a4,  a3, 0                  /* a4 = xt_intenable */
+    l32i    a5,  sp, XT_STK_VPRI        /* a5 = saved xt_vpri_mask */
     and     a4,  a4, a5
     wsr     a4,  INTENABLE              /* update INTENABLE */
-    s32i    a5,  a3, 4                  /* restore _xt_vpri_mask */
+    s32i    a5,  a3, 4                  /* restore xt_vpri_mask */
     #endif
 
     l32i    a3,  sp, XT_STK_SAR

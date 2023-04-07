@@ -237,12 +237,12 @@
     add     a2, a4, a4                      /* a2 = a4 << 1 */
     addi    a2, a2, -1                      /* a2 = mask of 1's <= a4 bit */
     and     a2, a2, a3                      /* a2 = mask of all bits <= a4 at this level */
-    movi    a3, _xt_intdata
-    l32i    a6, a3, 4                       /* a6 = _xt_vpri_mask */
+    movi    a3, xt_intdata
+    l32i    a6, a3, 4                       /* a6 = xt_vpri_mask */
     neg     a2, a2
     addi    a2, a2, -1                      /* a2 = mask to apply */
     and     a5, a6, a2                      /* mask off all bits <= a4 bit */
-    s32i    a5, a3, 4                       /* update _xt_vpri_mask */
+    s32i    a5, a3, 4                       /* update xt_vpri_mask */
     rsr     a3, INTENABLE
     and     a3, a3, a2                      /* mask off all bits <= a4 bit */
     wsr     a3, INTENABLE
@@ -269,15 +269,15 @@
     #ifdef XT_USE_SWPRI
 8:
     /*
-    Restore old value of _xt_vpri_mask from a2. Also update INTENABLE from
-    virtual _xt_intenable which _could_ have changed during interrupt
+    Restore old value of xt_vpri_mask from a2. Also update INTENABLE from
+    virtual xt_intenable which _could_ have changed during interrupt
     processing. But before that, raise the interrupt level back again.
     */
 
     rsil    a3, \level
-    movi    a3, _xt_intdata
-    l32i    a4, a3, 0                       /* a4 = _xt_intenable    */
-    s32i    a2, a3, 4                       /* update _xt_vpri_mask  */
+    movi    a3, xt_intdata
+    l32i    a4, a3, 0                       /* a4 = xt_intenable    */
+    s32i    a2, a3, 4                       /* update xt_vpri_mask  */
     and     a4, a4, a2                      /* a4 = masked intenable */
     wsr     a4, INTENABLE                   /* update INTENABLE      */
     #else
