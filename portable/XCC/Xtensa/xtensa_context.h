@@ -525,7 +525,6 @@ XSTRUCT_END(XtExcFrame)
 
     l32i     a1,  a9, TCB_TOP_OF_STACK_OFF      // a1 <- pxCurrentTCB->pxTopOfStack
     addi    a10,  a1, XT_STK_FRMSZ - XT_STK_XFRM_SZ
-    l32i    a10,  a1, XT_STK_ATOMCTL
     j 1f //bbci    a10,  31, 1f                        // Bit 31 = solicited flag
 
     // Solicited restore
