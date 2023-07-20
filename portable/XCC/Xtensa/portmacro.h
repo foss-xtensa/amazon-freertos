@@ -239,12 +239,9 @@ void _frxt_setup_switch( void );
 
 /* Tickless idle */
 #if ( configUSE_TICKLESS_IDLE != 0 )
-#ifndef portSUPPRESS_TICKS_AND_SLEEP_ABS
-extern void vPortSuppressTicksAndSleep( TickType_t target,
-                                        TickType_t xExpectedIdleTime );
-#define portSUPPRESS_TICKS_AND_SLEEP_ABS( target, xExpectedIdleTime ) \
-        vPortSuppressTicksAndSleep( target, xExpectedIdleTime )
-#endif
+extern void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime );
+#define portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime ) \
+        vPortSuppressTicksAndSleep( xExpectedIdleTime )
 #endif
 
 #endif //__ASSEMBLER__

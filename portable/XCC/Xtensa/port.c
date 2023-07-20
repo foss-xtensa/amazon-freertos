@@ -392,7 +392,7 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
 // Tickless idle support. Suppress N ticks and sleep when directed by kernel.
 //-----------------------------------------------------------------------------
 #if ( configUSE_TICKLESS_IDLE != 0 )
-void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime )
+void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
 {
     eSleepModeStatus eSleepStatus;
     uint32_t ps;
@@ -415,7 +415,6 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
         uint32_t skip_tick;
         uint32_t now;
 
-        xExpectedIdleTime = target - xt_tick_count;
         // Compute number of cycles to sleep for, capped by max limit.
         // we use one less than the number of ticks because we are already
         // partway through the current tick. This is adjusted later below.
@@ -455,9 +454,12 @@ void vPortSuppressTicksAndSleep( TickType_t target, TickType_t xExpectedIdleTime
             // deadline try to move deadline to the next possible tick.
             // Otherwise update tick count for the passed ticks, but don't
             // change the deadline.
+            // If we get here, we have not handled a timer interrupt, so
+            // ccompare is still in the future, or in the immediate past
+            // (crossed after entering the critical section above). In the
+            // latter case the pending interrupt will be cleared below.
 
-            if ( ccompare - now > xt_tick_cycles &&
-                 ccompare - now <= INT32_MAX )
+            if ( ccompare - now > xt_tick_cycles )
             {
                 uint32_t prev_tick = first_blocked_tick - xt_tick_cycles;
                 uint32_t actual_cycles = now - prev_tick;
