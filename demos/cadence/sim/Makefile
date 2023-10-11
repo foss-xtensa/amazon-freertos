@@ -173,6 +173,30 @@ $(BLDDIR)/xt_clib.o : $(OSLIB)
 small_test : $(BLDDIR)/.mkdir
 	$(MAKE) --no-print-directory $(BLDDIR)/small_test.exe CFLAGS="$(CFLAGS) -DSMALL_TEST -DXT_USE_THREAD_SAFE_CLIB=0"
 
+
+#------------------------------------------------------------------------------
+# The overlay test requires some special handling and also a separate build of
+# the FreeRTOS library. Use "make clean; make overlay" to build.
+#------------------------------------------------------------------------------
+
+OVLYLSP = $(BLDDIR)/olsp
+
+$(OVLYLSP) :
+	xt-regenlsps -mlsp=sim -b $@
+	@echo "OVERLAYS = 4" >> $@/memmap.xmm
+	@echo "OVERLAY_ALIGN = 4096" >> $@/memmap.xmm
+	xt-genldscripts -b $@
+
+# Must specify this object file to override default version in liboverlay.
+FIX = $(BLDDIR)/xtensa_overlay_os_hook.o
+
+$(BLDDIR)/overlay_test.exe : overlay_test.c $(OSLIB) $(OVLYLSP)
+	$(CC) $(CCFLAGS) $(CFLAGS_$*) $(INCS) -o $@ $< $(FIX) $(OSLIB) -loverlay -lxtutil -mlsp=$(OVLYLSP)
+
+overlay : $(BLDDIR)/.mkdir
+	$(MAKE) --no-print-directory $(BLDDIR)/overlay_test.exe CFLAGS="$(CFLAGS) -DXT_USE_OVLY=1"
+
+
 clean :
 	$(RM_R) $(BLDDIR)
 

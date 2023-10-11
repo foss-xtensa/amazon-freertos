@@ -23,6 +23,16 @@ NOTE: For MPU builds, execute "make all MPU=1". This passed define
     mpu_basic.exe   -- MPU/User tasks (RING1) test
     NOTE: Only in MPU build - see Notes for Version 1.8
 
+To build the overlay test, run "make overlay". This will build the
+following test in build/ -
+
+    overlay_test.exe -- Code overlay manager integration
+
+NOTE: The overlay test requires the FreeRTOS library to be built with
+XT_USE_OVLY = 1. The makefile takes care of this, but you should do a
+"make clean" before running "make overlay". Similarly, run "make clean"
+before running "make all".
+
 To build a minimal-size test, run "make small". This will build the
 following test in build/ -
 

@@ -226,6 +226,15 @@ define this to 1 if either newlib or xclib is detected.
 The space for the per-thread C library context data is allocated within
 the FreeRTOS TCB structure.
 
+The code overlay example must be built separately since it requires the
+FreeRTOS library to be rebuilt. XT_USE_OVLY must be defined at build time,
+this is handled by the makefile if you do the following:
+
+> xt-make clean
+> xt-make overlay
+
+Note that the overlay example generates its own LSP from the 'sim' LSP.
+
 
 IMPORTANT NOTE
 --------------
@@ -389,8 +398,7 @@ without editing the source code. Here are some of the more useful ones:
                             and interrupt handlers. Disabled by default.
 
     XT_USE_OVLY             Enable code overlay support. It uses a mutex,
-                            hence configUSE_MUTEX must be enabled. This
-                            option is currently unsupported.
+                            hence configUSE_MUTEXES must be enabled.
 
     XT_USE_SWPRI            Enable software prioritization of interrupts.
                             Enabling this will prioritize interrupts with
@@ -735,9 +743,11 @@ Hooks for Dynamic Installation of Handlers:
 
 Overlay Support
 
-    Code overlays are currently not supported for FreeRTOS. This will be
-    supported in a future release. Make sure that the option XT_USE_OVLY is
-    never defined when building.
+    Code overlays are supported as of version 2.30 for Xtensa LX processors
+    only. This is enabled by defining XT_USE_OVLY when building FreeRTOS and
+    the application code, and requires liboverlay.a to be specified at link
+    time. See the overlay example and the Xtensa system SW reference manual
+    for more details.
 
 
 -End-

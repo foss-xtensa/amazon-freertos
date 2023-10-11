@@ -1,5 +1,13 @@
 
 
+Notes for Version 2.30
+----------------------
+
+- Code overlay support enabled (for Xtensa LX only). An example
+  is provided in the demos/cadence/sim directory. Code overlay
+  support requires mutexes.
+
+
 Notes for Version 2.20
 ----------------------
 

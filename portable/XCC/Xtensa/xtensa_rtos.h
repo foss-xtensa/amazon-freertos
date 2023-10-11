@@ -28,7 +28,7 @@
  */
 
 /*
- * Copyright (c) 2015-2022 Cadence Design Systems, Inc.
+ * Copyright (c) 2015-2023 Cadence Design Systems, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -269,8 +269,8 @@ Xtensa Port Version.
 
 *******************************************************************************/
 
-#define XTENSA_PORT_VERSION             2.20
-#define XTENSA_PORT_VERSION_STRING      "2.20"
+#define XTENSA_PORT_VERSION             2.30
+#define XTENSA_PORT_VERSION_STRING      "2.30"
 
 #define XT_IRQ_LOCK_LEVEL XCHAL_EXCM_LEVEL
 

@@ -54,10 +54,14 @@
  * xtensa_overlay_os_hook.c -- Overlay manager OS hooks for FreeRTOS.
  */
 
+#ifdef XT_USE_OVLY
+
+#include <xtensa/overlay.h>
+
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-#if configUSE_MUTEX
+#if configUSE_MUTEXES
 
 /* Mutex object that controls access to the overlay. Currently only one
  * overlay region is supported so one mutex suffices.
@@ -84,7 +88,7 @@ void xt_overlay_init_os(void)
  */
 void xt_overlay_lock(void)
 {
-    xSemaphoreTake(xt_overlay_mutex, 0);
+    xSemaphoreTake(xt_overlay_mutex, portMAX_DELAY);
 }
 
 
@@ -96,4 +100,11 @@ void xt_overlay_unlock(void)
     xSemaphoreGive(xt_overlay_mutex);
 }
 
-#endif
+#else
+
+#error "Mutex support is required for overlays"
+
+#endif /* configUSE_MUTEXES */
+
+#endif /* XT_USE_OVLY */
+
