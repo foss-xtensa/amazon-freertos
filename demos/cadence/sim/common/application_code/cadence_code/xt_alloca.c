@@ -142,7 +142,7 @@ static int test_alloca(void)
         if (stuff[i] != STUFF[i]) return 0;
 
     /* If we got this far, alloca must have worked. */
-    return 1;
+    return (f > 0) ? 1 : 0;
 }
 
 /*

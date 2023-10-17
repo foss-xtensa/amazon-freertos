@@ -173,7 +173,7 @@ static void Init_Task( void * pdata )
     while ( busy );
 
     t1 = xTaskGetTickCount();
-    printf( TEST_PFX " PASSED!\n" );
+    printf( TEST_PFX " PASSED! %d ticks\n", t1 - t0 );
 
 done:
 #ifdef XT_SIMULATOR

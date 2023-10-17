@@ -120,10 +120,9 @@ void illegalInstHandler(XtExcFrame *frame)
 void softwareIntHandler(void* arg)
 {
     SemaphoreHandle_t xSem = (SemaphoreHandle_t)arg;
-    int err;
 
     /* Signal the semaphore */
-    err = xSemaphoreGiveFromISR(xSem, NULL);
+    xSemaphoreGiveFromISR(xSem, NULL);
 
 #if defined(XT_USE_SWPRI) || XCHAL_HAVE_XEA3
     if (uiSwInt2Num) {
