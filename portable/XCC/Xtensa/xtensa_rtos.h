@@ -115,6 +115,10 @@ However these can still be overridden from the command line.
   #endif
 #endif
 
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS > 32) && (defined XT_INTEXC_HOOKS)
+#error "FreeRTOS/XTENSA XEA2 interrupt/exception hooks require <= 32 interrupts."
+#endif
+
 #if (!XT_SIMULATOR) && (!XT_BOARD)
   #error Either XT_SIMULATOR or XT_BOARD must be defined.
 #endif
@@ -269,8 +273,8 @@ Xtensa Port Version.
 
 *******************************************************************************/
 
-#define XTENSA_PORT_VERSION             2.30
-#define XTENSA_PORT_VERSION_STRING      "2.30"
+#define XTENSA_PORT_VERSION             2.40
+#define XTENSA_PORT_VERSION_STRING      "2.40"
 
 #define XT_IRQ_LOCK_LEVEL XCHAL_EXCM_LEVEL
 

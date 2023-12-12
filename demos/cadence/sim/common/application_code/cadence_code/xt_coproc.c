@@ -163,12 +163,17 @@ static float crunch(unsigned n, float x, float z)
 *********************************************************************************************************
 */
 
-#define TASK_INIT_PRIO          11
-#define TASK_HIGH_PRIO          10
-#define TASK0_PRIO              5
-#define TASK1_PRIO              4
-#define TASK2_PRIO              3
-#define TASK3_PRIO              2
+/* If MPU support is enabled these tasks will have to be created as
+ * privileged because xTaskCreate() does not support nonprivileged
+ * task creation.
+ */
+
+#define TASK_INIT_PRIO          (11 | portPRIVILEGE_BIT)
+#define TASK_HIGH_PRIO          (10 | portPRIVILEGE_BIT)
+#define TASK0_PRIO              (5  | portPRIVILEGE_BIT)
+#define TASK1_PRIO              (4  | portPRIVILEGE_BIT)
+#define TASK2_PRIO              (3  | portPRIVILEGE_BIT)
+#define TASK3_PRIO              (2  | portPRIVILEGE_BIT)
 
 static TaskHandle_t Task_TCB[4];
 

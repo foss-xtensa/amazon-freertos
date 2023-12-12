@@ -117,7 +117,7 @@ xt_set_exception_handler( uint32_t n, xt_exc_handler f )
 
 #if XCHAL_HAVE_INTERRUPTS
 
-#if XCHAL_HAVE_XEA2
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
 /* Defined in xtensa_intr_asm.S */
 extern uint32_t xt_intenable;
 extern uint32_t xt_vpri_mask;
@@ -202,7 +202,7 @@ xt_set_interrupt_handler( uint32_t n, xt_handler f, void * arg )
 void
 xt_interrupt_enable( uint32_t intnum )
 {
-#if XCHAL_HAVE_XEA2
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
     if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
     {
         uint32_t ps = XT_RSIL( 15 );
@@ -226,7 +226,7 @@ xt_interrupt_enable( uint32_t intnum )
 void
 xt_interrupt_disable( uint32_t intnum )
 {
-#if XCHAL_HAVE_XEA2
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
     if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
     {
         uint32_t ps = XT_RSIL( 15 );
@@ -250,7 +250,7 @@ xt_interrupt_disable( uint32_t intnum )
 uint32_t
 xt_interrupt_enabled( uint32_t intnum )
 {
-#if XCHAL_HAVE_XEA2
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
     if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
     {
         return ( (xt_intenable & (1U << intnum)) != 0 ) ? 1U : 0;

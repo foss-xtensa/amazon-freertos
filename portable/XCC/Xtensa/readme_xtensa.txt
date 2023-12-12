@@ -405,7 +405,8 @@ without editing the source code. Here are some of the more useful ones:
                             higher bit numbers over those with lower bit
                             numbers at the same level. This works only for
                             low and medium priority interrupts that can be
-                            dispatched to C handlers, and only for XEA2.
+                            dispatched to C handlers, and only for XEA2
+                            when 32 or fewer interrupts are configured.
 
 
 Register Usage and Stack Frames

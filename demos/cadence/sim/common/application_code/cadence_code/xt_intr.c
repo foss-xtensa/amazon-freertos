@@ -52,8 +52,10 @@
 /* Test iterations */
 #define TEST_ITER         1000
 
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
 /* Uncomment this to exercise the s/w prioritization */
 #define XT_USE_SWPRI      1
+#endif
 
 #define INT_LO_PRI        (XCHAL_NUM_INTLEVELS - 2)
 #define INT_HI_PRI        (XCHAL_NUM_INTLEVELS - 1)

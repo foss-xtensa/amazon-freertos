@@ -120,12 +120,17 @@ small : small_test
 
 os : $(OSLIB)
 
+# NOTE: The section alignment below can be matched to the target config's
+# MPU minimum alignment, we just use 4K here because that is the max possible.
+
 ifeq ($(HOSTTYPE),win)
 SECT_PRIV := PLACE SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) WITH_SECTION(.data)
+SECT_ALIGN := ALIGN SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) 4096
 endif
 
 ifeq ($(HOSTTYPE),unix)
 SECT_PRIV := "PLACE SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) WITH_SECTION(.data)"
+SECT_ALIGN := "ALIGN SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) 4096"
 endif
 
 $(LSPPATH)/.mkdir :
@@ -133,6 +138,7 @@ $(LSPPATH)/.mkdir :
 	$(CP) $(subst /,$(S),$(CONFIGDIR))$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)memmap.xmm $(LSPPATH)
 	$(CP) $(subst /,$(S),$(CONFIGDIR))$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)specs $(LSPPATH)
 	echo $(SECT_PRIV) >> $(LSPPATH)$(S)memmap.xmm
+	echo $(SECT_ALIGN) >> $(LSPPATH)$(S)memmap.xmm
 	xt-genldscripts -b $(LSPPATH)
 	@echo "" > $@
 

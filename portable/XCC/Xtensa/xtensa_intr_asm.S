@@ -71,7 +71,7 @@
 -------------------------------------------------------------------------------
 */
 
-#if XCHAL_HAVE_XEA2
+#if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
 
     .data
     .global xt_intdata

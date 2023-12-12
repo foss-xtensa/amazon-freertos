@@ -61,6 +61,12 @@ static inline uint32_t get_ccompare(void)
     return v;
 }
 
+static inline void show_results_and_exit(int rc)
+{
+    printf("%s (%d)\n", rc == 0 ? "Passed" : "Failed", rc);
+    exit(rc);
+}
+
 #define TIMER_PERIOD 4
 #define TIMER_CLOCKS (TIMER_PERIOD * configCPU_CLOCK_HZ / configTICK_RATE_HZ)
 #define TICK_CLOCKS (configCPU_CLOCK_HZ / configTICK_RATE_HZ)
@@ -86,7 +92,7 @@ static void timer(TimerHandle_t t)
         if (rc == 0) {
             printf("Done\n");
         }
-        exit(rc);
+        show_results_and_exit(rc);
     }
     xSemaphoreGive(td->lock);
 }
@@ -110,7 +116,7 @@ static void Init_Task(void *pdata)
         ++td->thread_cnt;
     }
     printf("Done\n");
-    exit(rc);
+    show_results_and_exit(rc);
 }
 
 
@@ -124,7 +130,7 @@ void vApplicationTickHook(void)
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     puts("\nStack overflow, stopping.");
-    exit(1);
+    show_results_and_exit(1);
 }
 
 int main(void)

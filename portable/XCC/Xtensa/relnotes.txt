@@ -1,5 +1,12 @@
 
 
+Notes for Version 2.40
+----------------------
+
+- Now supports Xtensa LX processors with up to 128 interrupts.
+  Note: XT_USE_SWPRI only supported on LX processors with <= 32 interrupts.
+
+
 Notes for Version 2.30
 ----------------------
 

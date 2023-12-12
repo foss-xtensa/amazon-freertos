@@ -58,6 +58,13 @@
   #endif
 #endif
 
+static inline void show_results_and_exit(int rc)
+{
+    printf("%s (%d)\n", rc == 0 ? "Passed" : "Failed", rc);
+    exit(rc);
+}
+
+
 #ifdef OTHER_TIMER_INDEX
 
 #define INIT_TASK_PRIO      (4 + portPRIVILEGE_BIT)
@@ -71,6 +78,7 @@ struct timer_data
     uint32_t delta;
     uint32_t timer_cnt;
     uint32_t thread_cnt;
+    uint32_t missed_delta;
 };
 
 static inline uint32_t get_ccount(void)
@@ -107,8 +115,31 @@ static void timer(TimerHandle_t t)
     if (td->ccount) {
         if (ccount - td->ccount > TIMER_CLOCKS + (TICK_CLOCKS - 1) / 2 ||
             ccount - td->ccount < TIMER_CLOCKS - (TICK_CLOCKS - 1) / 2) {
-            printf("%s: %d, expected: %d; delta: %d\n",
-                   __func__, ccount - td->ccount, TIMER_CLOCKS, td->delta);
+            printf("%s: %d, expected: %d +/- %d; delta: %d\n",
+                   __func__, ccount - td->ccount, TIMER_CLOCKS, (TICK_CLOCKS - 1) / 2, td->delta);
+            if (ccount - td->ccount > TIMER_CLOCKS + (TICK_CLOCKS - 1) / 2 &&
+                ccount - td->ccount < TIMER_CLOCKS + (TICK_CLOCKS - 1) &&
+                td->missed_delta == 0) {
+                /* In tickless mode, it is possible that a timer can be handled
+                 * one tick later than expected, with the subsequent expiration
+                 * handled one tick earlier.  Adjust for this possibility and 
+                 * only flag an error if it is not corrected on the next tick.
+                 */
+                td->missed_delta = td->delta;
+                printf("%s: (suppressing at delta %d)\n", __func__, td->delta);
+            } else if (td->missed_delta != 0 &&
+                       td->missed_delta + 10 == td->delta &&
+                       ccount - td->ccount < TIMER_CLOCKS - (TICK_CLOCKS - 1) / 2 &&
+                       ccount - td->ccount > TIMER_CLOCKS - (TICK_CLOCKS - 1)) {
+                printf("%s: (compensated at delta %d; ignored)\n", __func__, td->delta);
+                td->missed_delta = 0;
+            } else {
+                rc = 1;
+            }
+        }
+        if (td->missed_delta != 0 && td->missed_delta != td->delta) {
+            printf("%s: (uncompensated delta %d, missed at %d.  Test FAILED\n",
+                    __func__, td->delta, td->missed_delta);
             rc = 1;
         }
     }
@@ -120,7 +151,7 @@ static void timer(TimerHandle_t t)
         if (rc == 0) {
             printf("Done\n");
         }
-        exit(rc);
+        show_results_and_exit(rc);
     }
     xSemaphoreGive(td->lock);
 }
@@ -152,7 +183,7 @@ static void Init_Task(void *pdata)
         ++td->thread_cnt;
     }
     printf("Done\n");
-    exit(rc);
+    show_results_and_exit(rc);
 }
 
 #endif
@@ -166,7 +197,7 @@ void vApplicationTickHook(void)
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     puts("\nStack overflow, stopping.");
-    exit(1);
+    show_results_and_exit(1);
 }
 
 int main(void)
@@ -187,6 +218,7 @@ int main(void)
     return 1;
 #else
     printf( "no acceptable timer for early wakeup test\n" );
+    show_results_and_exit(0);
     return 0;
 #endif
 }

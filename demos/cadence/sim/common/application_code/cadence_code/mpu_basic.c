@@ -264,6 +264,7 @@ int check_mpu(char name[], uint32_t priv_code_attr, uint32_t priv_data_attr, uin
     xt_printf("%s (line:%d): FAIL: other mem, got attribute %x, expected %x\n",  name, __LINE__, attr, other_mem_attr );
     exit(1);
   }
+  xt_printf("%s (line:%d): TODO: check memory type 0x%x\n", name, __LINE__, type);
   xt_printf("%s (line:%d): Test other mem attribute PASS\n", name, __LINE__);
   (*passes_p)++;
 
@@ -331,14 +332,17 @@ static void restrictedUserTask1( )
 
   /* Cannot read privileged data */
   TEST(1, "3rd test",  readData = *( volatile uint32_t *) privileged_data_start);
+  xt_printf("3rd test: readData 0x%x\n", readData);
   /* Cannot write privileged code */
   TEST(1, "4th test", readData = *( volatile uint32_t *) privileged_functions_start);
+  xt_printf("4th test: readData 0x%x\n", readData);
 
   /* Cannot write it's own private priv R/W space */
   TEST(1, "5th test",  dummyARRAY1_2[0] = 1)
 
   /* Can read it's own private user r space */
   TEST(0, "6th test",  readData = dummyARRAY1_2[0])
+  xt_printf("6th test: readData 0x%x\n", readData);
 
   /* TODO: FETCH from privileged functions */
 
@@ -376,9 +380,11 @@ static void restrictedPrivTask1( )
 
   /* Read privileged data */
   TEST(0, "1st test", readData = *( volatile uint32_t *) privileged_data_start)
+  xt_printf("1st test: readData 0x%x\n", readData);
 
   /* Read privileged code */
   TEST(0, "2nd test", readData = *( volatile uint32_t *) privileged_functions_start);
+  xt_printf("2nd test: readData 0x%x\n", readData);
 
   /* TODO: Write privileged code - no exception but how to test ? */
   puts("Exiting restrictedPrivTask1'\n");
@@ -399,9 +405,11 @@ static void PrivTask1( void *pvParameters )
 
   /* Read privileged data */
   TEST(0, "1st test", readData = *( volatile uint32_t *) privileged_data_start)
+  xt_printf("1st test: readData 0x%x\n", readData);
 
   /* Read privileged code */
   TEST(0, "2nd test", readData = *( volatile uint32_t *) privileged_functions_start);
+  xt_printf("2nd test: readData 0x%x\n", readData);
 
   /* Write privileged code - exception expected */
   TEST(1, "3rd test", *( volatile uint32_t *) privileged_functions_start = 1);
@@ -452,7 +460,7 @@ static void idleTask( void *pvParameters )
     xt_printf("TESTING FAILURE: #passes:%d, expected:%d\n", *passes_p, exp_passes);
     exit(1);
   }
-  xt_printf("TESTING SUCEEDED\n");
+  xt_printf("TESTING SUCEEDED, Test Passed\n");
   exit(0);
 }
 

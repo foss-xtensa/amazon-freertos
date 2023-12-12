@@ -249,7 +249,7 @@
 #ifndef SMALL_TEST
 
 #if (!defined XT_INTEXC_HOOKS)
-#define configXT_INTEXC_HOOKS               1   /* Exception hooks used by certain tests */
+#define configXT_INTEXC_HOOKS               0   /* Disable exception hooks */
 #endif
 
 #if configUSE_TRACE_FACILITY_2

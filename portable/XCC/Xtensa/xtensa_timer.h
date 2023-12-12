@@ -131,7 +131,20 @@ available.
 #define XT_CCOMPARE             (CCOMPARE + XT_TIMER_INDEX)
 #define XT_TIMER_INTNUM         XCHAL_TIMER_INTERRUPT(XT_TIMER_INDEX)
 #define XT_TIMER_INTPRI         XCHAL_INT_LEVEL(XT_TIMER_INTNUM)
-#define XT_TIMER_INTEN          (1 << XT_TIMER_INTNUM)
+
+/*
+ * Xtensa LX8 supports up to 128 interrupts whereas LX7 supports up to 32.
+ *
+ * Redefine the legacy XT_TIMER_INTEN (which limited the interrupt number to
+ * be in the lower 32 or lower 64 bits depending on data type) as two defines
+ * describing the INTEN bit within a 32-bit component and a 4-block component, 
+ * where each block contains a group of 32 interrupt bits.
+ *
+ * Name changes are intentional such that any dependencies are caught at 
+ * compile-time and are found regardless of timer configuration.
+ */
+#define XT_TIMER_INTEN_BIT      (1 << (XT_TIMER_INTNUM & 31U))
+#define XT_TIMER_INTEN_BLK      (XT_TIMER_INTNUM >> 5)
 
 #if XT_TIMER_INTNUM == XTHAL_TIMER_UNCONFIGURED
   #error "The timer selected by XT_TIMER_INDEX does not exist in this core."
