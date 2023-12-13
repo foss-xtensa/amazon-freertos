@@ -62,6 +62,11 @@
 // Number of concurrent tasks.
 #define NTASKS                  4
 
+// If MPU support is enabled these tasks will be created as privileged tasks.
+// xTaskCreate does not support creating nonprivileged tasks.
+#define INIT_TASK_PRIO          (20 | portPRIVILEGE_BIT)
+#define TEST_TASK_PRIO          (18 | portPRIVILEGE_BIT)
+
 uint32_t     result[NTASKS];
 TaskHandle_t Task_TCB[NTASKS];
 
@@ -146,7 +151,12 @@ static void Init_Task( void * pdata )
     for ( i = 0; i < NTASKS; ++i )
     {
         // Create the application tasks (all are lower priority so wait for us).
-        err = xTaskCreate( Task_Func, "Task", TASK_STK_SIZE, (void *) i, 18, &Task_TCB[i] );
+        err = xTaskCreate( Task_Func,
+                           "Task",
+                           TASK_STK_SIZE,
+                           (void *) i,
+                           TEST_TASK_PRIO,
+                           &Task_TCB[i] );
 
         if ( err != pdPASS )
         {
@@ -206,7 +216,12 @@ int main( void )
     printf( TEST_PFX " running...\n" );
 
     // Create the control task initially with the high priority.
-    err = xTaskCreate( Init_Task, "Init_Task", TASK_STK_SIZE, NULL, 20, NULL );
+    err = xTaskCreate( Init_Task,
+                       "Init_Task",
+                       TASK_STK_SIZE,
+                       NULL,
+                       INIT_TASK_PRIO,
+                       NULL );
 
     if ( err != pdPASS )
     {

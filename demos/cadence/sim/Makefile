@@ -78,10 +78,10 @@ endif
 
 # Build with MPU support
 ifeq ($(MPU),1)
-LSPPATH = $(BLDDIR)$(S)lsp$(S)$(LSP)
-MPUFLAGS = -DportUSING_MPU_WRAPPERS=1 -DportALIGN_SECTIONS
+LSPPATH     = $(BLDDIR)$(S)lsp$(S)$(LSP)
+MPUFLAGS    = -DportUSING_MPU_WRAPPERS=1 -DportALIGN_SECTIONS
 else
-LSPPATH = $(LSP)
+LSPPATH     = $(LSP)
 endif
 
 # Build options. Override CFLAGS from the make command line if desired.
@@ -133,13 +133,17 @@ SECT_PRIV := "PLACE SECTIONS(privileged_data privileged_functions freertos_syste
 SECT_ALIGN := "ALIGN SECTIONS(privileged_data privileged_functions freertos_system_calls private_region1 private_region2 private_region3 private_stack) 4096"
 endif
 
+# NOTE: Older xt-genldscripts does not support "ALIGN SECTIONS ..." so attempt to gracefully omit it
+# if it exits with an error
 $(LSPPATH)/.mkdir :
 	$(MKPATH) $(LSPPATH)
 	$(CP) $(subst /,$(S),$(CONFIGDIR))$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)memmap.xmm $(LSPPATH)
 	$(CP) $(subst /,$(S),$(CONFIGDIR))$(S)xtensa-elf$(S)lib$(S)$(LSP)$(S)specs $(LSPPATH)
 	echo $(SECT_PRIV) >> $(LSPPATH)$(S)memmap.xmm
+	$(CP) $(LSPPATH)$(S)memmap.xmm $(LSPPATH)$(S)memmap.xmm.noalign
 	echo $(SECT_ALIGN) >> $(LSPPATH)$(S)memmap.xmm
-	xt-genldscripts -b $(LSPPATH)
+	-xt-genldscripts -b $(LSPPATH) > $(LSPPATH)$(S)sect_align.log 2>&1 || $(CP) $(LSPPATH)$(S)memmap.xmm.noalign $(LSPPATH)$(S)memmap.xmm
+	xt-genldscripts -b $(LSPPATH) >> $(LSPPATH)$(S)sect_align.log 2>&1
 	@echo "" > $@
 
 $(BLDDIR)/.mkdir :
@@ -148,6 +152,7 @@ $(BLDDIR)/.mkdir :
 
 ifeq ($(MPU),1)
 MPULSP = $(LSPPATH)/.mkdir
+lsptest : $(LSPPATH)/.mkdir
 endif
 
 $(EXE) : $(BLDDIR)/%.exe : $(BLDDIR)/%.o $(OSLIB) $(MPULSP)
