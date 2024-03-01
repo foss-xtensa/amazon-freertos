@@ -360,8 +360,14 @@ typedef enum {
 #define portNUM_MAX_SWAPPED_MPU_PAIRS (portNUM_CONFIGURABLE_REGIONS + \
                                        portLEGACY_UNPRIVILEGED_TASKS + 1)
 
+#if XCHAL_MPU_ENTRIES < 16
+# error "MPU entries < 16 is not supported"
+#endif
 #if XCHAL_MPU_ENTRIES < portNUM_USED_MPU_ENTRIES
 # error "Require MPU with at least portNUM_USED_MPU_ENTRIES foreground entries"
+#endif
+#if XCHAL_MPU_ALIGN > 16384
+# error "MPU region alignment > 16384 is not supported"
 #endif
 
 #ifndef __ASSEMBLER__
