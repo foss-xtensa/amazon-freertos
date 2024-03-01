@@ -205,7 +205,7 @@ xt_interrupt_enable( uint32_t intnum )
 #if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
     if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
     {
-        uint32_t ps = XT_RSIL( 15 );
+        int ps = XT_RSIL( 15 );
 
         // New INTENABLE = (xt_intenable | mask) & xt_vpri_mask.
         xt_intenable |= ( 1U << intnum );
@@ -229,7 +229,7 @@ xt_interrupt_disable( uint32_t intnum )
 #if XCHAL_HAVE_XEA2 && (XCHAL_NUM_INTERRUPTS <= 32)
     if ( intnum < (uint32_t) XCHAL_NUM_INTERRUPTS )
     {
-        uint32_t ps = XT_RSIL( 15 );
+        int ps = XT_RSIL( 15 );
 
         // New INTENABLE = (xt_intenable & ~mask) & xt_vpri_mask.
         xt_intenable &= ~( 1U << intnum );

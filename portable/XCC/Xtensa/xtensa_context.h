@@ -76,7 +76,11 @@
 
 
 /* Align a value up to nearest n-byte boundary, where n is a power of 2. */
+#ifdef __ASSEMBLER__
 #define ALIGNUP(n, val) (((val) + (n)-1) & -(n))
+#else
+#define ALIGNUP(n, val) (((val) + (n)-1) & (unsigned)-(n))
+#endif
 
 
 /*

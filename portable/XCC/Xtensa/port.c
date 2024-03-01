@@ -293,9 +293,9 @@ void vPortEndScheduler( void )
 //-----------------------------------------------------------------------------
 #if portUSING_MPU_WRAPPERS
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack,
-				    TaskFunction_t pxCode,
-				    void *pvParameters,
-				    BaseType_t xRunPrivileged )
+                                    TaskFunction_t pxCode,
+                                    void *pvParameters,
+                                    BaseType_t xRunPrivileged )
 #else
 StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                     TaskFunction_t pxCode,
@@ -310,7 +310,7 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
     // Allocate enough space for coprocessor state, align base address. This is the
     // adjusted top-of-stack and also the start of the coprocessor save area.
-    sp = (StackType_t *) ((((uint32_t) pxTopOfStack) - (uint32_t) XT_CP_SIZE) & ~0xF);
+    sp = (StackType_t *) ((((uint32_t) pxTopOfStack) - (uint32_t) XT_CP_SIZE) & (uint32_t)~0xF);
 
     // Allocate interrupt stack frame. XT_STK_FRMSZ is always a multiple of 16 bytes
     // so 16-byte alignment is ensured.
@@ -336,33 +336,33 @@ StackType_t *pxPortInitialiseStack( StackType_t * pxTopOfStack,
     // area (sp) is saved in the dummy frame for the wrapper to use.
 
     #if XCHAL_HAVE_XEA2
-    frame->pc   = (UBaseType_t) pxCode;             // task entrypoint
-    frame->a0   = 0;                                // to terminate GDB backtrace
-    frame->a1   = (UBaseType_t) sp;                 // top of stack - CP save area
-    frame->exit = (UBaseType_t) _xt_task_start;     // task start wrapper
+    frame->pc   = (long) pxCode;            // task entrypoint
+    frame->a0   = 0;                        // to terminate GDB backtrace
+    frame->a1   = (long) sp;                // top of stack - CP save area
+    frame->exit = (long) _xt_task_start;    // task start wrapper
     // Set initial PS to int level 0, EXCM disabled ('rfe' will enable), user mode.
     // Also set entry point argument parameter.
     #ifdef __XTENSA_CALL0_ABI__
-    frame->a2 = (UBaseType_t) pvParameters;
+    frame->a2 = (long) pvParameters;
     frame->ps = PS_UM | PS_EXCM;
     #else
     // + for windowed ABI also set WOE and CALLINC (pretend task was 'call4'd).
-    frame->a6 = (UBaseType_t) pvParameters;
+    frame->a6 = (long) pvParameters;
     frame->ps = PS_UM | PS_EXCM | PS_WOE | PS_CALLINC(1);
     #endif
     #endif
 
     #if XCHAL_HAVE_XEA3
-    frame->a8 = (UBaseType_t) pxCode;             // task entrypoint
-    frame->a9 = (UBaseType_t) sp;                 // top of stack - CP save area
-    frame->pc = (UBaseType_t) _xt_task_start;     // task start wrapper
-    frame->ps = PS_STACK_FIRSTKER;                // initial PS
-    frame->atomctl = 0;                           // initial value
+    frame->a8 = (long) pxCode;              // task entrypoint
+    frame->a9 = (long) sp;                  // top of stack - CP save area
+    frame->pc = (long) _xt_task_start;      // task start wrapper
+    frame->ps = PS_STACK_FIRSTKER;          // initial PS
+    frame->atomctl = 0;                     // initial value
     // Set entry point arg.
     #ifdef __XTENSA_CALL0_ABI__
-    frame->a2  = (UBaseType_t) pvParameters;
+    frame->a2  = (long) pvParameters;
     #else
-    frame->a10 = (UBaseType_t) pvParameters;
+    frame->a10 = (long) pvParameters;
     #endif
     #endif
 
@@ -540,7 +540,7 @@ static void update_tick_remainder( uint32_t now )
     if ( old_ccompare - now < old_tick_cycles )
     {
         uint32_t new_ccompare = now +
-            (uint64_t)(old_ccompare - now) * xt_tick_cycles / old_tick_cycles;
+            (uint32_t)((uint64_t)(old_ccompare - now) * xt_tick_cycles / old_tick_cycles);
 
         xt_set_ccompare( XT_TIMER_INDEX, new_ccompare );
         now = xt_get_ccount();

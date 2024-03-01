@@ -5,7 +5,7 @@
 #define DEFINE(sym,val) \
     printf("#define %s %d /* %s */\n", #sym, (val), #val)
 
-int main()
+int main(void)
 {
     DEFINE(TCB_TOP_OF_STACK_OFF, offsetof(TCB_t, pxTopOfStack));
 #if portUSING_MPU_WRAPPERS

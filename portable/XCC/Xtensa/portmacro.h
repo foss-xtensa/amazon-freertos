@@ -146,7 +146,7 @@ extern void vPortExitCritical(void);
 
 #define portSTACK_ALIGNMENT         XCHAL_MPU_ALIGN
 #define portPRIVILEGE_BIT           0x80000000UL
-#define portIS_PRIVILEGED() \
+#define portIS_PRIVILEGED()         (int) \
     ({ \
         register unsigned code __asm("a2") = SYSCALL_is_priv; \
         __asm volatile ("syscall\n" \
@@ -372,10 +372,10 @@ extern uint32_t privileged_functions_end[];
 extern uint32_t _bss_start[];
 extern uint32_t _bss_end[];
 
-#define portPRIVILEGED_CODE_START    ((uint32_t)privileged_functions_start & -XCHAL_MPU_ALIGN)
-#define portPRIVILEGED_CODE_END      (((uint32_t)privileged_functions_end + (XCHAL_MPU_ALIGN - 1)) & -XCHAL_MPU_ALIGN)
-#define portPRIVILEGED_DATA_START    ((uint32_t)privileged_data_start & -XCHAL_MPU_ALIGN)
-#define portPRIVILEGED_DATA_END      (((uint32_t)privileged_data_end + (XCHAL_MPU_ALIGN - 1)) & -XCHAL_MPU_ALIGN)
+#define portPRIVILEGED_CODE_START    ((uint32_t)privileged_functions_start & (uint32_t)-XCHAL_MPU_ALIGN)
+#define portPRIVILEGED_CODE_END      (((uint32_t)privileged_functions_end + (XCHAL_MPU_ALIGN - 1)) & (uint32_t)-XCHAL_MPU_ALIGN)
+#define portPRIVILEGED_DATA_START    ((uint32_t)privileged_data_start & (uint32_t)-XCHAL_MPU_ALIGN)
+#define portPRIVILEGED_DATA_END      (((uint32_t)privileged_data_end + (XCHAL_MPU_ALIGN - 1)) & (uint32_t)-XCHAL_MPU_ALIGN)
 
 typedef struct {
     // Define here mpu_settings, which is port dependent

@@ -161,7 +161,7 @@ private_overlap_other_regions(const struct xMEMORY_REGION * const xRegions,
             end = (uint32_t)pxBottomOfStack + stackSizeInBytes;
         } else {
             start = (uint32_t)xRegions[i].pvBaseAddress;
-            end = (uint32_t)(xRegions[i].pvBaseAddress + xRegions[i].ulLengthInBytes);
+            end = (uint32_t)(xRegions[i].pvBaseAddress) + xRegions[i].ulLengthInBytes;
         }
 
         if (start == 0 && end == 0) {
@@ -280,7 +280,7 @@ add_mpu_entry_to_TCB(xthal_MPU_entry mpumap[], uint32_t addr, uint32_t attr,
     //first check if in order
     if (addr & (XCHAL_MPU_ALIGN - 1)) {
         XPRINT ("Entry addr:%x aligned to %x!\n", addr, XCHAL_MPU_ALIGN);
-        addr &= -XCHAL_MPU_ALIGN;
+        addr &= (uint32_t)-XCHAL_MPU_ALIGN;
     }
 
     for (index = XCHAL_MPU_ENTRIES - 1; index >= 0; index--) {
@@ -289,15 +289,17 @@ add_mpu_entry_to_TCB(xthal_MPU_entry mpumap[], uint32_t addr, uint32_t attr,
          * If start then simply override the matching entry.
          * If end, don't add new entry
          */
-        if ((addr >= (mpumap[index].as & ~0x1) && start) ||
-            (addr >  (mpumap[index].as & ~0x1) && !start)) {
+        if ((addr >= (mpumap[index].as & ~0x1U) && start) ||
+            (addr >  (mpumap[index].as & ~0x1U) && !start)) {
             //move others down
             //FIXME - see not to move everything but only entries added so far
-            memmove(mpumap, mpumap + 1, sizeof(xthal_MPU_entry) * index);
+            memmove(mpumap, mpumap + 1, sizeof(xthal_MPU_entry) * (uint32_t)index);
             break;
         }
     }
-    mpumap[index] = (xthal_MPU_entry)XTHAL_MPU_ENTRY(addr, 1, attr, type);
+	if (index >= 0) {
+        mpumap[index] = (xthal_MPU_entry)XTHAL_MPU_ENTRY(addr, 1, attr, type);
+	}
 }
 
 static int  PRIVILEGED_FUNCTION
@@ -306,7 +308,7 @@ find_addr_in_map(xthal_MPU_entry mpumap[], uint32_t addr)
     int i;
 
     for (i = XCHAL_MPU_ENTRIES - 1; i >= 0; i--) {
-        if (addr >= (mpumap[i].as & ~0x1))
+        if (addr >= (mpumap[i].as & ~0x1U))
             return i;
     }
     return -1;
@@ -363,8 +365,8 @@ setupMPU(void)
     }
 
     for (i = 0;  i < XCHAL_MPU_ENTRIES; i++) {
-        mpumap[i].at &= -XCHAL_MPU_ENTRIES;
-        mpumap[i].at |= i;
+        mpumap[i].at &= (uint32_t)-XCHAL_MPU_ENTRIES;
+        mpumap[i].at |= (uint32_t)i;
     }
 
     int map_status = xthal_check_map(mpumap, XCHAL_MPU_ENTRIES);
@@ -402,7 +404,7 @@ setupMPU(void)
             xtMPUError = MPU_ERR_INIT_ENTRY_NOT_IN_MAP;
             return pdFALSE;
         }
-        g_privateDetails[i].index = index;
+        g_privateDetails[i].index = (uint32_t)index;
     }
 
     // Update range if not set by MPU thread, to be from the previous to the next entry
@@ -475,7 +477,7 @@ init_private_mpu_regions(const struct xMEMORY_REGION * const xRegions,
                 break;
             }
             g_privateDetails[i + PRIVATE_CONFIGURABLE_IDX].start  = (uint32_t)(xRegions[i].pvBaseAddress);
-            g_privateDetails[i + PRIVATE_CONFIGURABLE_IDX].end    = (uint32_t)(xRegions[i].pvBaseAddress + xRegions[i].ulLengthInBytes);
+            g_privateDetails[i + PRIVATE_CONFIGURABLE_IDX].end    = (uint32_t)(xRegions[i].pvBaseAddress) + xRegions[i].ulLengthInBytes;
         }
         g_num_used_mpu_entries = i + PRIVATE_CONFIGURABLE_IDX;
     } else {
@@ -530,7 +532,7 @@ init_task_mpu(xMPU_SETTINGS *xMPUSettings, const struct xMEMORY_REGION * const x
 
         for (i = 0; i < g_num_used_mpu_entries - PRIVATE_CONFIGURABLE_IDX; i++) {
             if (region_mpu_aligned((uint32_t)(xRegions[i].pvBaseAddress),
-                                   (uint32_t)(xRegions[i].pvBaseAddress + xRegions[i].ulLengthInBytes)) == pdFALSE) {
+                                   (uint32_t)(xRegions[i].pvBaseAddress) + xRegions[i].ulLengthInBytes) == pdFALSE) {
                 FAIL_VOID_RETURN(MPU_ERR_PRIVATE_NOT_ALIGNED);
             }
         }
@@ -569,7 +571,7 @@ init_task_mpu(xMPU_SETTINGS *xMPUSettings, const struct xMEMORY_REGION * const x
             int region_i = i - PRIVATE_CONFIGURABLE_IDX;
 
             uint32_t start = (uint32_t)(xRegions[region_i].pvBaseAddress);
-            uint32_t end   = (uint32_t)(xRegions[region_i].pvBaseAddress + xRegions[region_i].ulLengthInBytes);
+            uint32_t end   = (uint32_t)(xRegions[region_i].pvBaseAddress) + xRegions[region_i].ulLengthInBytes;
 
             uint32_t privType   = xRegions[region_i].ulParameters & 0xFFFFE000;  // FIXME - use hal functions for these 2
             uint32_t privAccess = xRegions[region_i].ulParameters & 0x00000FFF;
