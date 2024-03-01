@@ -156,7 +156,7 @@ lsptest : $(LSPPATH)/.mkdir
 endif
 
 $(EXE) : $(BLDDIR)/%.exe : $(BLDDIR)/%.o $(OSLIB) $(MPULSP)
-	$(CC) -o $@ $< -mlsp=$(LSPPATH) $(LDFLAGS) $(OSLIB) -lxtutil
+	$(CC) -o $@ $< -mlsp=$(LSPPATH) $(LDFLAGS) $(OSLIB) -lxtutil -lm
 
 $(OBJS) : $(BLDDIR)/%.o : %.c $(BLDDIR)/.mkdir
 	$(CC) $(CCFLAGS) $(CFLAGS_$*) $(INCS) -MD -MF $(subst .o,.d,$@) -c -o $@ $<
