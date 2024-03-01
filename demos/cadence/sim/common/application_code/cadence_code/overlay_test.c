@@ -56,7 +56,7 @@ DECLARE_OVERLAY(1);
 DECLARE_OVERLAY(2);
 
 
-#define STACK_SIZE          (XT_STACK_MIN_SIZE + 0x400)
+#define STACK_SIZE          ((XT_STACK_MIN_SIZE + 0x400) / sizeof(StackType_t))
 #define THREAD_0_PRIO       (5 | portPRIVILEGE_BIT)
 #define THREAD_1_PRIO       (4 | portPRIVILEGE_BIT)
 #define THREAD_2_PRIO       (4 | portPRIVILEGE_BIT)

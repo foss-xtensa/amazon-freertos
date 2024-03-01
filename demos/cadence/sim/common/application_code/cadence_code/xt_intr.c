@@ -74,9 +74,9 @@ volatile int iExcCount = 0;
 volatile int junk;
 
 /* Stack size for tasks that do not use the C library. */
-#define     TASK_STK_SIZE_MIN       (XT_STACK_MIN_SIZE)
+#define     TASK_STK_SIZE_MIN       ((XT_STACK_MIN_SIZE) / sizeof(StackType_t))
 /* Stack size for tasks that use the C library and/or the coprocessors */
-#define     TASK_STK_SIZE_STD       (XT_STACK_EXTRA + 0x1000)
+#define     TASK_STK_SIZE_STD       ((XT_STACK_MIN_SIZE + 0x400) / sizeof(StackType_t))
 
 /* Queue for passing count. */
 #define     QUEUE_SIZE              16

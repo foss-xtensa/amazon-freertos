@@ -224,7 +224,7 @@
 #define configUSE_TIMERS                    1
 #define configTIMER_TASK_PRIORITY           ( configMAX_PRIORITIES - 1 )
 #define configTIMER_QUEUE_LENGTH            10
-#define configTIMER_TASK_STACK_DEPTH        configMINIMAL_STACK_SIZE
+#define configTIMER_TASK_STACK_DEPTH        (configMINIMAL_STACK_SIZE + 0x100)
 
 #ifdef SMALL_TEST
 #define INCLUDE_xTimerPendFunctionCall      0

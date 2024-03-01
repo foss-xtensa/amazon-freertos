@@ -70,7 +70,7 @@ uint32_t xtbsp_clock_freq_hz(void)
 #ifdef OTHER_TIMER_INDEX
 
 #define INIT_TASK_PRIO  (4 | portPRIVILEGE_BIT)
-#define TASK_STK_SIZE   8192
+#define TASK_STK_SIZE   ((XT_STACK_MIN_SIZE + 0x400) / sizeof(StackType_t))
 
 struct timer_data
 {

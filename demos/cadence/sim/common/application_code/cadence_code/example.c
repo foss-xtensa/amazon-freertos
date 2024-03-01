@@ -53,7 +53,7 @@
 #endif
 
 // Default task stack size.
-#define TASK_STK_SIZE            (XT_STACK_MIN_SIZE + 0x400)
+#define TASK_STK_SIZE            ((XT_STACK_MIN_SIZE + 0x400) / sizeof(StackType_t))
 
 // Flags set by each task on completion.
 #define TASK_TERM_INIT          (1<<0)

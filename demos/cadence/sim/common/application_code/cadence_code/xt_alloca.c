@@ -155,7 +155,7 @@ static int test_alloca(void)
 
 /* Create task as privileged if MPU enabled. */
 #define TASK_INIT_PRIO          (20 | portPRIVILEGE_BIT)
-#define INIT_TASK_STK_SIZE      (XT_STACK_EXTRA + 0x1000)
+#define INIT_TASK_STK_SIZE      ((XT_STACK_MIN_SIZE + 0x800) / sizeof(StackType_t))
 
 static void Init_Task(void *pdata)
 {

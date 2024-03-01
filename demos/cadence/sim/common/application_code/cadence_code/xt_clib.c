@@ -54,7 +54,7 @@
 
 
 // Task stack sizes. Can be reduced if printf() etc. are not called.
-#define TASK_STK_SIZE           (XT_STACK_MIN_SIZE + 0x800)
+#define TASK_STK_SIZE           ((XT_STACK_MIN_SIZE + 0x800) / sizeof(StackType_t))
 
 // Uniform prefix for reporting PASS/FAIL test results.
 #define TEST_PFX                "Xtensa C library context switch test (xt_clib)"

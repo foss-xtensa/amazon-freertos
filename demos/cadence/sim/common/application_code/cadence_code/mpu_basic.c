@@ -137,9 +137,13 @@ static int  exp_passes = 27;
 static int  exp_passes = 23;
 #endif
 
+/* Stack size for nonrestricted tasks. */
+#define STACK_SIZE    ((XT_STACK_MIN_SIZE + 1024) / sizeof(StackType_t))
+
 /* Define the constants used to allocate the reg test task stacks.  Note that
-that stack size is defined in words, not bytes. */
-#define mainTASK_STACK_SIZE    4096
+that stack size is defined in words, not bytes. Also note that this size has
+to be a multiple of the MPU align size. */
+#define mainTASK_STACK_SIZE    (((XT_STACK_MIN_SIZE + XCHAL_MPU_ALIGN - 1) & -XCHAL_MPU_ALIGN) / sizeof(StackType_t))
 
 /* Declare the stacks that will be used by the reg test tasks.  The kernel will
 automatically create an MPU region for the stack.  The stack alignment must
@@ -560,7 +564,7 @@ int main( void )
   puts("(MAIN)    xTaskCreate PrivTask1\n");
   xTaskCreate(PrivTask1,                   /* The function that implements the task. */
               "PrivTask1",                 /* Text name for the task. */
-              8192,                        /* Stack depth in words. */
+              STACK_SIZE,                  /* Stack depth in words. */
               NULL,                        /* Task parameters. */
               ( 5 | portPRIVILEGE_BIT ),   /* Priority and mode. */
               NULL                         /* Handle. */
@@ -574,7 +578,7 @@ int main( void )
   puts("(MAIN)    xTaskCreateStatic staticUserTask1\n");
   xTaskCreateStatic(staticUserTask1,     /* The function that implements the task. */
                     "staticUserTask1",     /* Text name for the task. */
-                    8192,                  /* Stack depth in words. */
+                    STACK_SIZE,            /* Stack depth in words. */
                     NULL,                  /* Task parameters. */
                     ( 5 ),                 /* Priority and mode. */
                     uxStack,               /* Stack buffer. */
@@ -602,7 +606,7 @@ int main( void )
 
   xTaskCreate(idleTask,               /* The function that implements the task. */
               "idleTask",             /* Text name for the task. */
-              8192,                   /* Stack depth in words. */
+              configMINIMAL_STACK_SIZE,   /* Stack depth in words. */
               NULL,                   /* Task parameters. */
               0 | portPRIVILEGE_BIT,  /* Priority and mode (user in this case). */
               NULL                    /* Handle. */
@@ -654,7 +658,7 @@ void vApplicationMallocFailedHook( void )
   /* If configUSE_MALLOC_FAILED_HOOK is set to 1 then this function will
      be called automatically if a call to pvPortMalloc() fails.  pvPortMalloc()
   is called automatically when a task, queue or semaphore is created. */
-  for( ;; );
+  exit(-1);
 }
 
 /*-----------------------------------------------------------*/
