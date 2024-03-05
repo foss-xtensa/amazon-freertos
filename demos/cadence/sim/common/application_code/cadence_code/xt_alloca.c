@@ -84,7 +84,7 @@ static void putstr(const char *s)
             outbyte('\r');
             outbyte('\n');
         }
-        else if (iscntrl(c) && c != '\r') {
+        else if (iscntrl((int)c) && c != '\r') {
             outbyte('^');
             outbyte('@' + c);
         }

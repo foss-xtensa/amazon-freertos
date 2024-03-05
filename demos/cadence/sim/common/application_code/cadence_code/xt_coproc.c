@@ -91,10 +91,10 @@ different tasks in disjoint regions. Different params are chosen for configs wit
 floating-point co-processor so that this test will run on any config in reasonable time.
 */
 #if XCHAL_HAVE_FP
-    #define TASK0_PARAMS    50000, 0.9997, 2.0
-    #define TASK1_PARAMS    50000, 0.9996, 4.0
-    #define TASK2_PARAMS    50000, 0.9995, 6.0
-    #define TASK3_PARAMS    50000, 0.9994, 8.0
+    #define TASK0_PARAMS    50000, 0.9997F, 2.0
+    #define TASK1_PARAMS    50000, 0.9996F, 4.0
+    #define TASK2_PARAMS    50000, 0.9995F, 6.0
+    #define TASK3_PARAMS    50000, 0.9994F, 8.0
 #else                       
     #define TASK0_PARAMS      500, 0.97F,   2.0
     #define TASK1_PARAMS      500, 0.96F,   4.0
