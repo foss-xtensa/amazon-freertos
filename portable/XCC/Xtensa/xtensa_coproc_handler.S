@@ -503,7 +503,7 @@ _xt_coproc_exc:
         mov     a0, sp                          // Allocate stack frame
         addi    sp, sp, -XT_STK_FRMSZ
         s32i    a0, sp, XT_STK_A1               // save SP
-#if XCHAL_HAVE_WINDOWED
+#ifdef __XTENSA_WINDOWED_ABI__
         s32e    a0, sp, -12                     // for debug backtrace
 #endif  
         rsr     a0, PS
@@ -512,7 +512,7 @@ _xt_coproc_exc:
         s32i    a0, sp, XT_STK_PC               // save PC
         rsr     a0, EXCSAVE_1
         s32i    a0, sp, XT_STK_A0               // retrieve and save a0
-#if XCHAL_HAVE_WINDOWED
+#ifdef __XTENSA_WINDOWED_ABI__
         s32e    a0, sp, -16                     // for debug backtrace
 #endif
         s32i    a2, sp, XT_STK_A2

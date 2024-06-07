@@ -655,7 +655,7 @@ _UserExceptionVector:
 
     .text
 
-    #if XCHAL_HAVE_WINDOWED
+    #ifdef __XTENSA_WINDOWED_ABI__
     .align      4
 _xt_to_alloca_exc:
     call0   _xt_alloca_exc                  /* in window vectors section */
@@ -730,7 +730,7 @@ _xt_user_exc:
     #endif
 
     /* Handle alloca and syscall exceptions */
-    #if XCHAL_HAVE_WINDOWED
+    #ifdef __XTENSA_WINDOWED_ABI__
     beqi    a0, EXCCAUSE_ALLOCA,  _xt_to_alloca_exc
     #endif
     beqi    a0, EXCCAUSE_SYSCALL, _xt_to_syscall_exc
@@ -742,7 +742,7 @@ _xt_user_exc:
     mov     a0, sp
     addi    sp, sp, -XT_STK_FRMSZ
     s32i    a0, sp, XT_STK_A1
-    #if XCHAL_HAVE_WINDOWED
+    #ifdef __XTENSA_WINDOWED_ABI__
     s32e    a0, sp, -12                     /* for debug backtrace */
     #endif
     rsr     a0, PS                          /* save interruptee's PS */
@@ -751,7 +751,7 @@ _xt_user_exc:
     s32i    a0, sp, XT_STK_PC
     rsr     a0, EXCSAVE_1                   /* save interruptee's a0 */
     s32i    a0, sp, XT_STK_A0
-    #if XCHAL_HAVE_WINDOWED
+    #ifdef __XTENSA_WINDOWED_ABI__
     s32e    a0, sp, -16                     /* for debug backtrace */
     #endif
     s32i    a12, sp, XT_STK_A12             /* _xt_context_save requires A12- */
@@ -1699,7 +1699,7 @@ Registers a2 and up may contain return values.
 
 *******************************************************************************/
 
-#if XCHAL_HAVE_WINDOWED
+#ifdef __XTENSA_WINDOWED_ABI__
 
     .section .WindowVectors.text, "ax"
 
@@ -1926,7 +1926,7 @@ _WindowUnderflow12:
     l32e    a11, a11, -20   /* restore a11 from end of call[i]'s stack frame */
     rfwu
 
-#endif /* XCHAL_HAVE_WINDOWED */
+#endif /* __XTENSA_WINDOWED_ABI__ */
 
 /*
 --------------------------------------------------------------------------------
