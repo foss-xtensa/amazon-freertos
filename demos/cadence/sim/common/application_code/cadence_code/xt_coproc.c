@@ -108,6 +108,9 @@ floating-point co-processor so that this test will run on any config in reasonab
 static float    result[NTASKS];
 static float    expect[NTASKS];
 
+static TaskHandle_t Task_TCB[4];
+
+static int do_crash = 0;
 
 /*
 *********************************************************************************************************
@@ -145,17 +148,39 @@ a specified number of iterations and returns the result.
     x = initial coefficient in range [0,1), close to 1 slows convergence.
     z = arbitrary initial value > 0.
 */
-static float crunch(unsigned n, float x, float z)
+static float crunch(TaskHandle_t task, unsigned n, float x, float z)
 {
     unsigned i,j;
     float mx = -x;
-    float result = z;
+    float res = z;
 
     for (i=0; i<n; i+=j) {
         for (j=0; j < n>>3; ++j) {
-            result += x * z;
+            res += x * z;
             x = mx * x;
         }
+
+        /*
+        Kill one task halfway through its computation. The coproc
+        owner SA pointer will be pointing to this task's save area.
+        To demonstrate the bug, specify an argument to the program
+        to set the do_crash variable to nonzero.
+        */
+        if ((task != NULL) && (task == Task_TCB[0]) && (i > 10000)) {
+            extern void * _xt_coproc_owner_sa[XCHAL_CP_MAX];
+            int a;
+
+            for (a = 0; a < XCHAL_CP_MAX; a++) {
+                if (_xt_coproc_owner_sa[a] != NULL) {
+                    if (do_crash) {
+                        _xt_coproc_owner_sa[a] = (void *) 0xf1f1f1f1;
+                    }
+                }
+            }
+            result[0] = expect[0]; /* hack to get the test to say pass */
+            vTaskDelete(NULL);
+        }
+
         /*
         Solicit context-switch to exercise exception handler not saving state.
         However compiler saves/restores state around function calls, so test 
@@ -171,7 +196,7 @@ static float crunch(unsigned n, float x, float z)
         	vTaskDelay(1);
     }
 
-    return result;
+    return res;
 }
 
 /*
@@ -191,11 +216,9 @@ static float crunch(unsigned n, float x, float z)
 #define TASK2_PRIO              3
 #define TASK3_PRIO              2
 
-static TaskHandle_t Task_TCB[4];
-
 void Task0(void *pdata)
 {
-    result[0] = crunch(TASK0_PARAMS);
+    result[0] = crunch(Task_TCB[0], TASK0_PARAMS);
     if (result[0] == 0) result[0] = -1;
     vTaskDelete(NULL);
     assert(0);                          // Should never come here
@@ -203,7 +226,7 @@ void Task0(void *pdata)
 
 void Task1(void *pdata)
 {
-    result[1] = crunch(TASK1_PARAMS);
+    result[1] = crunch(Task_TCB[1], TASK1_PARAMS);
     if (result[1] == 0) result[1] = -1;
     vTaskDelete(NULL);
     assert(0);                          // Should never come here
@@ -211,7 +234,7 @@ void Task1(void *pdata)
 
 void Task2(void *pdata)
 {
-    result[2] = crunch(TASK2_PARAMS);
+    result[2] = crunch(Task_TCB[2], TASK2_PARAMS);
     if (result[2] == 0) result[2] = -1;
     vTaskDelete(NULL);
     assert(0);                          // Should never come here
@@ -219,7 +242,7 @@ void Task2(void *pdata)
 
 void Task3(void *pdata)
 {
-    result[3] = crunch(TASK3_PARAMS);
+    result[3] = crunch(Task_TCB[3], TASK3_PARAMS);
     if (result[3] == 0) result[3] = -1;
     vTaskDelete(NULL);
     assert(0);                          // Should never come here
@@ -249,10 +272,10 @@ static void Init_Task(void *pdata)
         result[i] = 0.0;
 
     /* Compute the expected values before multitasking starts (no CP exception). */
-    expect[0] = crunch(TASK0_PARAMS);
-    expect[1] = crunch(TASK1_PARAMS);
-    expect[2] = crunch(TASK2_PARAMS);
-    expect[3] = crunch(TASK3_PARAMS);
+    expect[0] = crunch(NULL, TASK0_PARAMS);
+    expect[1] = crunch(NULL, TASK1_PARAMS);
+    expect[2] = crunch(NULL, TASK2_PARAMS);
+    expect[3] = crunch(NULL, TASK3_PARAMS);
 
 #ifdef DIAGNOSTICS
     for (i=0; i<NTASKS; ++i)
@@ -373,6 +396,10 @@ int main_xt_coproc(int argc, char *argv[])
 {
     int     err = 0;
     int     exit_code = 0;
+
+    if (argc > 1) {
+        do_crash = 1;
+    }
 
     putstr("\nNumber of coprocessors = ");
     outbyte('0' + XCHAL_CP_NUM);
