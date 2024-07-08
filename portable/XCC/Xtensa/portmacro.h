@@ -412,6 +412,34 @@ void exit(int);
 #define configASSERT( x )   if (!(x)) { porttracePrint(-1); printf("\nAssertion failed in %s:%d\n", __FILE__, __LINE__); exit(-1); }
 #endif
 
+/* Task delete hook for cleanup. May be an issue if tracing is also needed. */
+#define traceTASK_DELETE(pxTCB)    portTaskDeleteHook(pxTCB->pxEndOfStack)
+
+static inline void portTaskDeleteHook(void * ptr)
+{
+#if XCHAL_CP_NUM > 0
+    /* Release any owned coprocessors. If the owner save area address
+       matches the address in 'ptr' then we are the owner, set to NULL. */
+    if (ptr != NULL) {
+        extern void * _xt_coproc_owner_sa[XCHAL_CP_MAX];
+        unsigned int i;
+
+        for (i = 0; i < XCHAL_CP_MAX; i++) {
+            if (_xt_coproc_owner_sa[i] == ptr) {
+                _xt_coproc_owner_sa[i] = NULL;
+            }
+#if (defined XT_DEBUG)
+            /* Only for testing / debugging */
+            if (_xt_coproc_owner_sa[i] == (void *)0xf1f1f1f1) {
+                _xt_coproc_owner_sa[i] = NULL;
+            }
+#endif
+        }
+    }
+#else
+    UNUSED(ptr);
+#endif
+}
 
 /* C library support -- only XCLIB and NEWLIB are supported. */
 
