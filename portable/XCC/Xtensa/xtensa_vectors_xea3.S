@@ -377,23 +377,6 @@ _JumpToResetHandler:
 
 
 //-----------------------------------------------------------------------------
-// Idle loop. On interrupt, no state needs saving.
-//-----------------------------------------------------------------------------
-
-        .align  4
-        .global _xt_idle
-
-_xt_idle:
-        movi    a14, xt_interrupt_stack_top
-        mov      a1, a14                // a1 <- Top of interrupt stack
-        movi    a14, 0                  // 0 = Normal
-        wsr.ms  a14                     // Set DISPST = Normal
-        rsync
-        waiti   0                       // Wait for interrupt
-        memw                            // HW erratum 569
-
-
-//-----------------------------------------------------------------------------
 // Scheduler interrupt handler. Triggered by context switch. At this time only
 // useful for windowed ABI to spill register windows.
 //-----------------------------------------------------------------------------
