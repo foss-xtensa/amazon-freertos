@@ -1,3 +1,7 @@
+## ![deprecated](https://github.com/user-attachments/assets/8a7eae96-6379-425a-8e0d-3e95ddd9e50d) DEPRECATED
+Announcement:
+As of July 1, 2025, this repository is deprecated. The contents of this repository will remain available but we will no longer provide updates. Please use the modern [FreeRTOS v11](https://github.com/foss-xtensa/FreeRTOS) fork on foss-xtensa, which includes the latest support for Xtensa processors in the submodule repositories [FreeRTOS-Kernel-Partner-Supported-Ports](https://github.com/foss-xtensa/FreeRTOS-Kernel-Partner-Supported-Ports) and [FreeRTOS-Partner-Supported-Demos](https://github.com/foss-xtensa/FreeRTOS-Partner-Supported-Demos).
+
 ## Getting started
 This repository contains FreeRTOS kernel source/header files and kernel ports only. This repository is referenced as a submodule in [FreeRTOS/FreeRTOS](https://github.com/FreeRTOS/FreeRTOS) repository, which contains pre-configured demo application projects under ```FreeRTOS/Demo``` directory. 
 
